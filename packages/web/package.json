@@ -1,0 +1,42 @@
+{
+  "name": "@rosettacommons/atomworks-studio-web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:core": "wasm-pack build ../core --target web --out-dir ../web/src/wasm -- --locked",
+    "dev": "pnpm build:core && vite",
+    "build": "pnpm build:core && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test:unit": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:e2e": "node tests/smoke.mjs",
+    "test:workbench": "node tests/workbench.mjs",
+    "test:menus": "node tests/menu-layout.mjs",
+    "test:editor": "node tests/editor-qol.mjs",
+    "test:conditions": "node tests/condition-authoring.mjs",
+    "test:condition-toggle": "node tests/condition-toggle.mjs",
+    "test:bonds": "node tests/bond-inspection.mjs",
+    "test:picking": "node tests/picking.mjs",
+    "test:imports": "node tests/import-options.mjs",
+    "test:coordinates": "node tests/unresolved-rendering.mjs",
+    "test:close": "node tests/close-session.mjs",
+    "test:examples": "node tests/example-imports.mjs",
+    "test:example-actions": "node tests/example-actions.mjs",
+    "test:annotation-camera": "node tests/annotation-camera.mjs",
+    "test:interactions": "node tests/interactions.mjs",
+    "test:condition-presentation": "node tests/condition-presentation.mjs"
+  },
+  "dependencies": {
+    "@baker-laboratory/patinae-viewer": "file:vendor/patinae-viewer-0.5.1-studio.1.tgz",
+    "molstar": "5.13.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@types/node": "^26.6.4",
+    "openapi-typescript": "^7.13.0",
+    "playwright-core": "^1.63.0",
+    "sass": "^1.105.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.3"
+  }
+}
