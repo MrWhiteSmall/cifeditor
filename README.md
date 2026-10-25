@@ -1,3 +1,5 @@
+> **CIF Editor 中文分支**：基于 AtomWorks Studio v0.0.1，新增 PDB → CIF 导入、中文/English 和主题设置。源码构建、运行与限制请先阅读 [中文说明](README.zh-CN.md)。下文为保留的上游文档，其中 PyPI 安装方式指向官方发行版。
+
 <h1 align="center">AtomWorks Studio</h1>
 
 <p align="center"><b>Inspect, annotate and edit molecular structures in a browser, VS Code or PyMOL.</b></p>

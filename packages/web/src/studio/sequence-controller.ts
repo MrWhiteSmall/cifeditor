@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { element } from "../dom";
 import type { SelectionController } from "../selection-controller";
 import type { SequenceChain } from "../types";
@@ -21,7 +22,7 @@ export class SequenceController {
       const hidden = !this.view.hidden;
       this.view.hidden = hidden;
       this.dock.classList.toggle("collapsed", hidden);
-      this.toggle.textContent = hidden ? "Show sequence" : "Hide sequence";
+      this.toggle.textContent = hidden ? t("Show sequence") : t("Hide sequence");
       this.toggle.setAttribute("aria-expanded", String(!hidden));
     });
     document.addEventListener("pointerup", () => {
@@ -70,18 +71,18 @@ export class SequenceController {
             ? `${item.realized_length ?? 0}×X`
             : `[${item.minimum}–${item.maximum}]`;
           token.title = item.realized
-            ? `Realized expandable segment (${item.realized_length} residues)`
-            : `Expandable segment (${item.minimum}-${item.maximum} residues)`;
+            ? t("Realized expandable segment ({0} residues)", [item.realized_length])
+            : t("Expandable segment ({0}-{1} residues)", [item.minimum, item.maximum]);
         } else {
           token.textContent = item.code.length === 1 ? item.code : "X";
           token.dataset.atoms = item.atom_indices.join(",");
           token.dataset.order = String(sequenceOrder++);
           token.title = `${chain.chain_id}/${item.residue_name} ${item.residue_id}`
             + (item.conditions.length ? ` · ${item.conditions.join(", ")}` : "")
-            + " · click to toggle, drag, Shift-click range";
+            + t(" · click to toggle, drag, Shift-click range");
           token.setAttribute(
             "aria-label",
-            `${item.residue_name} ${item.residue_id} in chain ${chain.chain_id}`,
+            t("{0} {1} in chain {2}", [item.residue_name, item.residue_id, chain.chain_id]),
           );
           for (const condition of item.conditions) token.classList.add(`condition-${condition}`);
           token.addEventListener("pointerdown", (event) => {
@@ -117,7 +118,7 @@ export class SequenceController {
       this.view.appendChild(row);
     }
     this.view.className = chains.length ? "sequence-view" : "sequence-view muted";
-    if (!chains.length) this.view.textContent = "No polymer sequence is available.";
+    if (!chains.length) this.view.textContent = t("No polymer sequence is available.");
     this.syncSelection();
   }
 }

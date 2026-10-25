@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { postJson } from "../api";
 import { applyCapabilities, closeToolbarMenus, element } from "../dom";
 import type { SelectionController } from "../selection-controller";
@@ -84,9 +85,9 @@ export class ViewerToolbarController {
         const target = this.viewerActionTarget.value as ViewerTarget;
         try {
           await this.options.runViewerUpdate(() => this.options.viewer().setRepresentation(representation, target, action));
-          this.options.log(`${action === "replace" ? "Show only" : action === "hide" ? "Hide" : "Show"} ${representation} · ${target === "all" ? "all atoms" : "selection"}.`);
+          this.options.log(`${action === "replace" ? t("Show only") : action === "hide" ? t("Hide") : t("Show")} ${representation} · ${target === "all" ? "all atoms" : "selection"}.`);
         } catch (error) {
-          this.options.log(`Display action failed: ${String(error)}`, "error");
+          this.options.log(t("Display action failed: {0}", [String(error)]), "error");
         }
       });
     }
@@ -98,7 +99,7 @@ export class ViewerToolbarController {
             this.viewerActionTarget.value as ViewerTarget,
           );
         } catch (error) {
-          this.options.log(`Color action failed: ${String(error)}`, "error");
+          this.options.log(t("Color action failed: {0}", [String(error)]), "error");
         }
       });
     }
@@ -112,7 +113,7 @@ export class ViewerToolbarController {
         .then(() => {
           this.viewerCommand.value = "";
         })
-        .catch((error) => this.options.log(`Command failed: ${String(error)}`, "error"));
+        .catch((error) => this.options.log(t("Command failed: {0}", [String(error)]), "error"));
     });
     this.viewerModeSelect.addEventListener("change", () => {
       const selected = this.parseMode(this.viewerModeSelect.value);
@@ -136,7 +137,7 @@ export class ViewerToolbarController {
     element<HTMLSelectElement>("pick-scope").disabled = !capabilities.picking;
     const commandsOption = this.selectionSyntax.querySelector('option[value="patinae"]');
     if (capabilities.commands) {
-      if (!commandsOption) this.selectionSyntax.add(new Option("PyMOL commands", "patinae"), 0);
+      if (!commandsOption) this.selectionSyntax.add(new Option(t("PyMOL commands"), "patinae"), 0);
     } else {
       commandsOption?.remove();
       this.selectionSyntax.value = "expression";
@@ -148,14 +149,14 @@ export class ViewerToolbarController {
   private updateCommandHint(): void {
     const syntax = this.selectionSyntax.value;
     const hint = syntax === "patinae"
-      ? "PyMOL command, e.g. select sele, name CA"
-      : "AtomWorks query, e.g. atom_name == 'CA'";
+      ? t("PyMOL command, e.g. select sele, name CA")
+      : t("AtomWorks query, e.g. atom_name == 'CA'");
     this.viewerCommand.placeholder = hint;
     this.viewerCommand.setAttribute("aria-label", hint);
     this.viewerCommand.title = syntax === "patinae"
-      ? "PyMOL-style selection and display commands; remove edits the document with Undo. See Backend for commands."
-      : "AtomWorks expressions or selection paths: sel('A/*/[10-20]/CA').";
-    element("run-viewer-command").textContent = syntax === "patinae" ? "Run" : "Select";
+      ? t("PyMOL-style selection and display commands; remove edits the document with Undo. See Backend for commands.")
+      : t("AtomWorks expressions or selection paths: sel('A/*/[10-20]/CA').");
+    element("run-viewer-command").textContent = syntax === "patinae" ? t("Run") : t("Select");
   }
 
   renderDrawers(): void {
@@ -169,7 +170,7 @@ export class ViewerToolbarController {
         button.type = "button";
         button.className = "drawer-object";
         button.textContent = `${object.enabled === false ? "○" : "●"} ${object.name} · ${object.type ?? "object"}`
-          + (object.atomCount === undefined ? "" : ` · ${object.atomCount.toLocaleString()} atoms`);
+          + (object.atomCount === undefined ? "" : t(" · {0} atoms", [object.atomCount.toLocaleString()]));
         button.title = object.enabled === false ? "Show object" : "Hide object";
         button.addEventListener("click", () => {
           viewer.setObjectEnabled(object.name, object.enabled === false);
@@ -180,8 +181,8 @@ export class ViewerToolbarController {
     } else {
       const summary = this.options.getSummary();
       objects.textContent = summary
-        ? `${summary.name} · ${summary.atom_count.toLocaleString()} atoms · chains ${summary.chain_ids.join(", ") || "—"}`
-        : "Open a structure to list objects.";
+        ? t("{0} · {1} atoms · chains {2}", [summary.name, summary.atom_count.toLocaleString(), summary.chain_ids.join(", ") || "—"])
+        : t("Open a structure to list objects.");
     }
     const selectionList = element("selection-list");
     const selections = viewer.getSelectionList();
@@ -196,7 +197,7 @@ export class ViewerToolbarController {
           try {
             this.options.selection.replace(viewer.evaluateSelection(selection.name), true);
           } catch (error) {
-            this.options.log(`Named selection failed: ${String(error)}`, "error");
+            this.options.log(t("Named selection failed: {0}", [String(error)]), "error");
           }
         });
         selectionList.append(button);
@@ -205,9 +206,9 @@ export class ViewerToolbarController {
     const measurements = viewer.listMeasurements();
     element("measurement-list").textContent = measurements.length
       ? measurements.map((item) =>
-        `${item.label ?? item.kind ?? "Measurement"}${item.value === undefined ? "" : ` · ${item.value}${item.unit ?? ""}`}`
+        `${item.label ?? item.kind ?? t("Measurement")}${item.value === undefined ? "" : ` · ${item.value}${item.unit ?? ""}`}`
       ).join("\n")
-      : "No measurements.";
+      : t("No measurements.");
   }
 
   async switchRenderer(mode: ViewerMode): Promise<void> {
@@ -226,7 +227,7 @@ export class ViewerToolbarController {
         history.replaceState(null, "", url);
         this.refreshCapabilities();
         this.renderDrawers();
-        this.options.log(`Switched renderer to ${mode === "patinae" ? "Patinae" : "Mol*"} without reloading.`);
+        this.options.log(t("Switched renderer to {0} without reloading.", [mode === "patinae" ? "Patinae" : "Mol*"]));
       } catch (error) {
         if (hadRenderer) {
           try {
@@ -234,15 +235,15 @@ export class ViewerToolbarController {
             this.refreshCapabilities();
             this.renderDrawers();
           } catch (restoreError) {
-            this.options.log(`Could not restore the previous renderer: ${String(restoreError)}`, "error");
+            this.options.log(t("Could not restore the previous renderer: {0}", [String(restoreError)]), "error");
           }
         }
         this.viewerModeSelect.value = viewer.initialized ? viewer.backend : "";
         notice.textContent = mode === "patinae" && !("gpu" in navigator)
-          ? "Patinae needs WebGPU in this browser. Mol* is still available."
-          : `Could not start ${mode === "patinae" ? "Patinae" : "Mol*"}. See the Activity log for details.`;
+          ? t("Patinae needs WebGPU in this browser. Mol* is still available.")
+          : t("Could not start {0}. See the Activity log for details.", [mode === "patinae" ? "Patinae" : "Mol*"]);
         notice.hidden = false;
-        this.options.log(`Renderer switch failed: ${String(error)}`, "error");
+        this.options.log(t("Renderer switch failed: {0}", [String(error)]), "error");
       }
     });
   }
@@ -258,12 +259,12 @@ export class ViewerToolbarController {
     const trimmed = command.trim();
     if (!trimmed) return;
     if (/[\n\r;]/.test(trimmed)) {
-      throw new Error("Run one command at a time; command separators are not allowed.");
+      throw new Error(t("Run one command at a time; command separators are not allowed."));
     }
     const sessionId = this.options.getSessionId();
     const atomworksMatch = /^(awselect|awselect-path)\s+(.+)$/i.exec(trimmed);
     if (syntax !== "patinae" || atomworksMatch) {
-      if (!sessionId) throw new Error("Open a CIF before selecting atoms.");
+      if (!sessionId) throw new Error(t("Open a CIF before selecting atoms."));
       const querySyntax = atomworksMatch
         ? atomworksMatch[1].toLowerCase() === "awselect-path" ? "path" : "expression"
         : syntax;
@@ -274,17 +275,17 @@ export class ViewerToolbarController {
         );
         return response.atom_indices;
       });
-      if (applied !== null) this.options.log(`AtomWorks ${querySyntax} query applied.`);
+      if (applied !== null) this.options.log(t("AtomWorks {0} query applied.", [querySyntax]));
       return;
     }
     const viewer = this.options.viewer();
     const verb = trimmed.split(/\s+/, 1)[0].toLowerCase();
     if (verb === "remove") {
-      if (!sessionId) throw new Error("Open a CIF before removing atoms.");
+      if (!sessionId) throw new Error(t("Open a CIF before removing atoms."));
       const expression = trimmed.slice(verb.length).trim();
       if (!expression) throw new Error("Usage: remove <selection>, for example remove solvent");
       const indices = viewer.evaluateSelection(expression);
-      if (!indices.length) throw new Error("No atoms match that selection.");
+      if (!indices.length) throw new Error(t("No atoms match that selection."));
       await this.options.mutate("/delete", {
         atom_indices: indices,
         close_residue_gaps: element<HTMLInputElement>("close-residue-gaps").checked,
@@ -302,10 +303,10 @@ export class ViewerToolbarController {
     if (!allowed) {
       throw new Error(
         STUDIO_UNSAFE_PATINAE_COMMANDS.has(metadata?.name ?? verb)
-          ? `Command '${verb}' would desynchronize the annotated CIF. Use AtomWorks Studio editing controls instead.`
+          ? t("Command '{0}' would desynchronize the annotated CIF. Use AtomWorks Studio editing controls instead.", [verb])
           : metadata?.unavailableReason
-          ? `Command '${verb}' is unavailable in the browser: ${metadata.unavailableReason}`
-          : `Unsupported viewer command '${verb}'. Browse available commands under Backend.`,
+          ? t("Command '{0}' is unavailable in the browser: {1}", [verb, metadata.unavailableReason])
+          : t("Unsupported viewer command '{0}'. Browse available commands under Backend.", [verb]),
       );
     }
     const result = await viewer.executeCommand(trimmed) as {
@@ -340,7 +341,7 @@ export class ViewerToolbarController {
       || command.description?.toLowerCase().includes(query)
     );
     if (!commands.length) {
-      container.textContent = "No matching commands.";
+      container.textContent = t("No matching commands.");
       return;
     }
     for (const command of commands) {

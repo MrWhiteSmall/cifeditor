@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import type {
   AnnotationGroup,
   AtomPick,
@@ -230,33 +231,33 @@ export class MolecularViewer {
     target: ViewerTarget,
     action: ViewerRepresentationAction = "show",
   ): Promise<void> {
-    if (!this.adapter?.setRepresentation) throw new Error("Representation controls are unavailable.");
-    if (!this.structures.length) throw new Error("Open a structure first.");
-    if (target === "selection" && !this.selectedAtomIndices.length) throw new Error("Select atoms first.");
-    if (representation === "everything" && action !== "hide") throw new Error("Choose a representation to show.");
+    if (!this.adapter?.setRepresentation) throw new Error(t("Representation controls are unavailable."));
+    if (!this.structures.length) throw new Error(t("Open a structure first."));
+    if (target === "selection" && !this.selectedAtomIndices.length) throw new Error(t("Select atoms first."));
+    if (representation === "everything" && action !== "hide") throw new Error(t("Choose a representation to show."));
     await this.adapter.setRepresentation(representation, target, action);
     if (target === "all" && (action === "replace" || representation === "everything")) this.representations = [];
     this.representations.push({ representation, target, action, atomIndices: [...this.selectedAtomIndices] });
   }
 
   setColor(color: ViewerColor, target: ViewerTarget): void {
-    if (!this.adapter?.setColor) throw new Error("Color controls are unavailable.");
+    if (!this.adapter?.setColor) throw new Error(t("Color controls are unavailable."));
     this.adapter.setColor(color, target);
   }
 
   setBackground(color: "black" | "white"): void {
-    if (!this.adapter?.setBackground) throw new Error("Background controls are unavailable.");
+    if (!this.adapter?.setBackground) throw new Error(t("Background controls are unavailable."));
     this.adapter.setBackground(color);
   }
 
   camera(action: ViewerCameraAction): void {
-    if (!this.adapter?.camera) throw new Error("Camera controls are unavailable.");
+    if (!this.adapter?.camera) throw new Error(t("Camera controls are unavailable."));
     this.adapter.camera(action);
   }
 
   executeCommand(command: string): unknown {
     if (!this.adapter?.executeCommand) {
-      throw new Error("Viewer commands are available only with the Patinae renderer.");
+      throw new Error(t("Viewer commands are available only with the Patinae renderer."));
     }
     return this.adapter.executeCommand(command);
   }
@@ -288,7 +289,7 @@ export class MolecularViewer {
   }
 
   async addMeasurement(request: ViewerMeasurementRequest): Promise<ViewerMeasurement[]> {
-    if (!this.adapter?.addMeasurement) throw new Error("Renderer measurements are unavailable.");
+    if (!this.adapter?.addMeasurement) throw new Error(t("Renderer measurements are unavailable."));
     const normalized = normalizeViewerMeasurementRequest(request);
     const measurements = await this.adapter.addMeasurement(normalized);
     this.measurementRequests.push(normalized);
@@ -296,7 +297,7 @@ export class MolecularViewer {
   }
 
   async showInteractions(interactions: ViewerInteraction[]): Promise<void> {
-    if (!this.adapter?.showInteractions) throw new Error("Renderer interaction overlays are unavailable.");
+    if (!this.adapter?.showInteractions) throw new Error(t("Renderer interaction overlays are unavailable."));
     this.interactionOverlays = interactions;
     await this.replayTransientVisuals();
   }

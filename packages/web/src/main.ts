@@ -1,3 +1,4 @@
+import { t } from "./i18n/index.ts";
 import { unpositionedAtomIndices } from "./viewers/unpositioned-atoms";
 import { TrajectoryController } from "./studio/trajectory-controller";
 import initCifCore, { inspect_cif } from "./wasm/annotation_studio_core.js";
@@ -27,6 +28,9 @@ import type {
 } from "./types";
 import { MolecularViewer, type AtomPick } from "./viewers";
 import "./style.css";
+import { initializePreferences } from "./preferences";
+
+initializePreferences(() => sessionId);
 
 const combineInput = element<HTMLInputElement>("combine-input");
 const selectionCount = element<HTMLSpanElement>("selection-count");
@@ -131,12 +135,12 @@ function updateSelectionUi(): void {
   const count = selectionController.size;
   const scope = pickScope.value as SelectionScope;
   selectionCount.textContent =
-    `${count} atom${count === 1 ? "" : "s"} selected`;
+    t("{0} atom{1} selected", [count, count === 1 ? "" : "s"]);
   element("picking-help").textContent = scope === "atom"
-    ? "Cartoon: show sticks · Atom: add/remove"
-    : "Click to add · Click again to remove";
+    ? t("Cartoon: show sticks · Atom: add/remove")
+    : t("Click to add · Click again to remove");
   element("active-selection-count").textContent =
-    `${count} atom${count === 1 ? "" : "s"} in active selection`;
+    t("{0} atom{1} in active selection", [count, count === 1 ? "" : "s"]);
   const hasSession = sessionId !== null;
   conditionController?.updateSelectionUi(hasSession);
   structureEditController?.updateSelectionUi(hasSession);
@@ -157,10 +161,10 @@ function renderSummary(summary: StructureSummary): void {
   summaryElement.classList.remove("muted");
   summaryElement.innerHTML = `
     <dl class="summary-grid">
-      <dt>Name</dt><dd>${escapeHtml(summary.name)}</dd>
-      <dt>Atoms</dt><dd>${summary.atom_count.toLocaleString()}</dd>
-      <dt>Chains</dt><dd>${escapeHtml(summary.chain_ids.join(", ") || "—")}</dd>
-      <dt>Undo</dt><dd>${summary.undo_depth}/10</dd>
+      <dt>${t("Name")}</dt><dd>${escapeHtml(summary.name)}</dd>
+      <dt>${t("Atoms")}</dt><dd>${summary.atom_count.toLocaleString()}</dd>
+      <dt>${t("Chains")}</dt><dd>${escapeHtml(summary.chain_ids.join(", ") || "—")}</dd>
+      <dt>${t("Undo")}</dt><dd>${summary.undo_depth}/10</dd>
     </dl>`;
   sequenceController?.render(summary.sequence);
   annotationController?.render(summary.annotations);
@@ -197,24 +201,24 @@ async function loadViewerCif(cif: string, name: string): Promise<void> {
     button.disabled = !hasCoordinates;
   }
   element("coordinate-summary").hidden = missingCoordinates === 0;
-  element("coordinate-summary").textContent = `${missingCoordinates} atoms have no coordinates. They remain in the document and sequence but are not rendered.`;
+  element("coordinate-summary").textContent = t("{0} atoms have no coordinates. They remain in the document and sequence but are not rendered.", [missingCoordinates]);
   if (missingCoordinates === wasmSummary.atom_count) {
     await molecularViewer.loadCifs([]);
-    log("No coordinates to display. The design's sequence and conditions remain editable.");
+    log(t("No coordinates to display. The design's sequence and conditions remain editable."));
     return;
   }
   await molecularViewer.loadCif(cif, name);
   if (!molecularViewer.initialized) {
     log(
-      `Imported ${wasmSummary.atom_count} atoms while the renderer is unavailable; ` +
-        `${wasmSummary.condition_categories.length} annotation categories remain editable.`,
+      t("Imported {0} atoms while the renderer is unavailable; ", [wasmSummary.atom_count]) +
+        t("{0} annotation categories remain editable.", [wasmSummary.condition_categories.length]),
     );
     return;
   }
   const backend = molecularViewer.backend === "patinae" ? "Patinae" : "Mol*";
   log(
-    `${backend} loaded ${wasmSummary.atom_count} atoms; lossless WASM found ` +
-      `${wasmSummary.condition_categories.length} annotation categories.`,
+    t("{0} loaded {1} atoms; lossless WASM found ", [backend, wasmSummary.atom_count]) +
+      t("{0} annotation categories.", [wasmSummary.condition_categories.length]),
   );
 }
 
@@ -226,7 +230,7 @@ async function handleAtomPicked({ atomIndex, label, scope: hitScope = "atom" }: 
   }
   const picking = selectionController.pickingScope;
   if (picking === "atom" && hitScope === "residue") {
-    log("Local sticks shown. Click a visible atom to add or remove it from the selection.");
+    log(t("Local sticks shown. Click a visible atom to add or remove it from the selection."));
     return;
   }
   const scope = picking;
@@ -245,10 +249,10 @@ async function handleAtomPicked({ atomIndex, label, scope: hitScope = "atom" }: 
       return resolved.atom_indices;
     });
     if (remove === null) return;
-    log(`${label ?? `Atom ${atomIndex}`} · ${remove ? "removed" : "selected"} (${scope})`);
+    log(`${label ?? t("Atom {0}", [atomIndex])} · ${remove ? "removed" : "selected"} (${scope})`);
     void annotationController?.inspectAtom(atomIndex);
   } catch (error) {
-    log(`Could not resolve ${scope} selection: ${String(error)}`, "error");
+    log(t("Could not resolve {0} selection: {1}", [scope, String(error)]), "error");
   }
 }
 
@@ -263,7 +267,7 @@ async function recoverRenderer(error: unknown): Promise<void> {
   history.replaceState(null, "", url);
   viewerToolbarController?.refreshCapabilities();
   selectionController.restore();
-  log("Patinae rendering stopped. Switched to Mol*; your document and Undo history are preserved.");
+  log(t("Patinae rendering stopped. Switched to Mol*; your document and Undo history are preserved."));
 }
 
 async function refreshFromServer(summary?: StructureSummary, preserveSelection = true): Promise<void> {
@@ -347,14 +351,14 @@ function mutate(path: string, body?: unknown, propagateError = false): Promise<v
         selectionController.clear();
       }
       await refreshFromServer(response.structure, !structural && !resetConditions);
-      if (resetConditions) annotationController?.setDetail("Choose a condition above, or click an atom to see its conditions.");
+      if (resetConditions) annotationController?.setDetail(t("Choose a condition above, or click an atom to see its conditions."));
       const message = response.edit_result?.message ?? "Annotation Studio state updated.";
       conditionController?.setFeedback(message);
       log(message);
       notifyHost("changed");
     } catch (error) {
       if (sessionId === targetSession) {
-        const message = `Error: ${String(error)}`;
+        const message = t("Error: {0}", [String(error)]);
         conditionController?.setFeedback(message);
         log(message, "error");
       }
@@ -388,7 +392,7 @@ async function initialize(): Promise<void> {
         await refreshFromServer(response.structure);
         enableSessionControls(true);
       }
-    }).catch((failure) => log(`Renderer recovery failed: ${String(failure)}`, "error")),
+    }).catch((failure) => log(t("Renderer recovery failed: {0}", [String(failure)]), "error")),
   );
   viewerToolbarController = new ViewerToolbarController({
     viewer: () => molecularViewer,
@@ -468,7 +472,7 @@ async function initialize(): Promise<void> {
       await molecularViewer.clearAllVisuals();
       persistSession(response);
       await refreshFromServer(response.structure, false);
-      log(`Combined ${filename}; conflicting chain IDs were reassigned.`);
+      log(t("Combined {0}; conflicting chain IDs were reassigned.", [filename]));
       notifyHost("changed");
     },
     log,
@@ -499,7 +503,7 @@ async function initialize(): Promise<void> {
     selectionSyntax.querySelector('option[value="patinae"]')?.remove();
     selectionSyntax.value = "expression";
     selectionSyntax.dispatchEvent(new Event("change"));
-    log(`Renderer initialization failed; editing remains available: ${String(error)}`, "error");
+    log(t("Renderer initialization failed; editing remains available: {0}", [String(error)]), "error");
   };
   try {
     await molecularViewer.initialize();
@@ -513,7 +517,7 @@ async function initialize(): Promise<void> {
         viewerModeSelect.value = "molstar";
         viewerToolbarController.refreshCapabilities();
         updateSelectionUi();
-        log(`Patinae (WebGPU) unavailable; using Mol* (WebGL) instead: ${String(error)}`, "error");
+        log(t("Patinae (WebGPU) unavailable; using Mol* (WebGL) instead: {0}", [String(error)]), "error");
       } catch (fallbackError) {
         degradeToEditingOnly(fallbackError);
       }
@@ -535,7 +539,7 @@ async function initialize(): Promise<void> {
       notifyHost("ready");
       const message = sessionStorage.getItem("annotation-studio-message");
       sessionStorage.removeItem("annotation-studio-message");
-      log(message ?? "Restored native AtomWorks session.");
+      log(message ?? t("Restored native AtomWorks session."));
       restoredSession = true;
     } catch {
       sessionStorage.removeItem("annotation-studio-session");
@@ -549,7 +553,7 @@ async function initialize(): Promise<void> {
     }, log);
     trajectoryController.bind(query.get("trajectory")!);
   }
-  if (!restoredSession) log("Ready. Open a CIF to start.");
+  if (!restoredSession) log(t("Ready. Open a CIF to start."));
   const pendingExample = query.has("session") ? null : example ?? sessionStorage.getItem(PENDING_EXAMPLE_KEY);
   if (pendingExample) {
     sessionStorage.removeItem(PENDING_EXAMPLE_KEY);
@@ -561,4 +565,4 @@ if (import.meta.env.PROD && window.parent === window && "serviceWorker" in navig
   void navigator.serviceWorker.register("/sw.js").catch(error => console.warn("Offline installation unavailable", error));
 }
 
-void initialize().catch((error) => log(`Initialization failed: ${String(error)}`, "error"));
+void initialize().catch((error) => log(t("Initialization failed: {0}", [String(error)]), "error"));

@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --bg-app: #1b1c1e;
   --bg-canvas: #121315;
@@ -60,8 +60,8 @@ h2 { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--text); }
 .header-logo { height: 24px; width: 24px; display: block; }
 .document-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font: 12px var(--font-mono); }
 .button-row { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; }
-.header-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; gap: 6px; margin-left: auto; }
-.header-actions > .file-button, .header-actions > button { width: 100%; white-space: nowrap; }
+.header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
+.header-actions > .file-button, .header-actions > button { width: auto; white-space: nowrap; }
 .studio-menu-popover .button-row > button { flex: 1 1 0; }
 .load-options { position: relative; }
 .load-options-popover {
@@ -429,3 +429,59 @@ body.host-vscode[data-host-theme="high-contrast-light"] {
 .error-text { color: #f87171 !important; font-weight: 600; }
 .import-dialog { width: min(560px, 90vw); max-height: 85vh; overflow-y: auto; }
 #import-settings p { line-height: 1.5; }
+
+/* Standalone preferences inherit the existing editor tokens and layout. */
+:root[data-ui-theme="light"] {
+  color-scheme: light;
+  --bg-app: #f6f7f9;
+  --surface-header: #ffffff;
+  --surface-panel: #f6f7f9;
+  --surface-card: #ffffff;
+  --surface-raised: #e9edf3;
+  --surface-recessed: #edf0f5;
+  --border: #cbd1da;
+  --border-strong: #9da8b7;
+  --text: #202938;
+  --text-secondary: #354356;
+  --text-muted: #4c5b70;
+  --text-subtle: #56647a;
+  --accent: #3459ac;
+  --accent-hover: #284789;
+  --accent-soft: #e4ecfc;
+  --accent-ink: #ffffff;
+  --focus: #3459ac;
+  --danger: #a32d38;
+  --danger-soft: #fbe7e9;
+}
+:root[data-accent="teal"] {
+  --accent: #79d9c1; --accent-hover: #a5e9d8; --accent-soft: #193e36;
+  --accent-ink: #122b25; --focus: #79d9c1;
+}
+:root[data-accent="violet"] {
+  --accent: #c2a7f3; --accent-hover: #d9c7fa; --accent-soft: #352747;
+  --accent-ink: #271839; --focus: #c2a7f3;
+}
+:root[data-ui-theme="light"][data-accent="teal"] {
+  --accent: #08776c; --accent-hover: #065f56; --accent-soft: #dcf3eb;
+  --accent-ink: #ffffff; --focus: #08776c;
+}
+:root[data-ui-theme="light"][data-accent="violet"] {
+  --accent: #6f4dbe; --accent-hover: #59399e; --accent-soft: #eee6fb;
+  --accent-ink: #ffffff; --focus: #6f4dbe;
+}
+::selection { background: var(--accent); color: var(--accent-ink); }
+input, textarea { caret-color: var(--accent); }
+* { scrollbar-color: var(--border-strong) var(--surface-recessed); }
+.preferences-menu summary { white-space: nowrap; }
+.preferences-menu .load-options-popover { width: 270px; }
+.preferences-menu p { line-height: 1.6; margin-bottom: 0; }
+.representation-mode label:has(input:checked) { background: var(--accent-soft); color: var(--text); }
+.representation-mode label:has(input:focus-visible) { outline-color: var(--focus); }
+:root[data-ui-theme="light"] #error-banner { color: #76232c; background: #fbe7e9; border-color: #a32d38; }
+:root[data-ui-theme="light"] .error-text { color: #a32d38 !important; }
+@media (max-width: 760px) {
+  header { flex-wrap: wrap; gap: 8px 12px; padding: 8px 10px; }
+  .header-actions { flex-basis: 100%; margin-left: 0; }
+  .header-actions > .file-button, .header-actions > button { flex: 1 1 auto; }
+  .preferences-menu .load-options-popover { position: fixed; top: 96px; right: 8px; width: min(270px, calc(100vw - 16px)); }
+}

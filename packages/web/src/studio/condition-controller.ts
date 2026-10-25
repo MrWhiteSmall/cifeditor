@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { element } from "../dom";
 import { api } from "../api";
 import type { SelectionController } from "../selection-controller";
@@ -90,7 +91,7 @@ export class ConditionController {
         if (groups.has(definition.editor_group)) continue;
         groups.add(definition.editor_group);
       }
-      this.conditionSelect.add(new Option(definition.editor_group ?? definition.label, name));
+      this.conditionSelect.add(new Option(t(definition.editor_group ?? definition.label), name));
     }
     this.conditionChanged();
   }
@@ -110,10 +111,10 @@ export class ConditionController {
       if (definition?.kind === "operation") {
         const endpoint = OPERATION_ENDPOINTS[this.conditionSelect.value];
         if (!endpoint) {
-          this.feedback.textContent = "This operation is not available in this build.";
+          this.feedback.textContent = t("This operation is not available in this build.");
           return;
         }
-        this.feedback.textContent = "Applying operation to the selection…";
+        this.feedback.textContent = t("Applying operation to the selection…");
         void this.options.mutate(endpoint, {
           atom_indices: [...this.options.selection.values],
           enabled: this.enabledInput.checked,
@@ -121,8 +122,8 @@ export class ConditionController {
         return;
       }
       this.feedback.textContent = this.enabledInput.checked
-        ? "Applying condition…"
-        : "Removing condition from the selection…";
+        ? t("Applying condition…")
+        : t("Removing condition from the selection…");
       void this.options.mutate("/conditions", {
         condition: this.conditionValue.querySelector<HTMLSelectElement>("#condition-residue-type")?.value
           ?? this.conditionSelect.value,
@@ -147,22 +148,22 @@ export class ConditionController {
       const group = this.conditionValue.querySelector<HTMLSelectElement>("#condition-group")?.value;
       button.disabled = !hasSession || count === 0 || (needsGroup && !group);
     }
-    this.applyButton.textContent = this.enabledInput.checked ? "Apply to selection" : "Remove from selection";
+    this.applyButton.textContent = this.enabledInput.checked ? t("Apply to selection") : t("Remove from selection");
     this.feedback.textContent = !hasSession
-      ? "Open a structure to edit conditions."
+      ? t("Open a structure to edit conditions.")
       : !definition
-        ? "Condition editing requires an installed provider."
+        ? t("Condition editing requires an installed provider.")
         : pair
           ? count === 2
-            ? "Ready: the selected atoms define one pair."
-            : `Select exactly two atoms (${count} selected).`
+            ? t("Ready: the selected atoms define one pair.")
+            : t("Select exactly two atoms ({0} selected).", [count])
           : count
-            ? `Ready to update ${count} selected atom${count === 1 ? "" : "s"}.`
-            : "Select one or more atoms.";
+            ? t("Ready to update {0} selected atom{1}.", [count, count === 1 ? "" : "s"])
+            : t("Select one or more atoms.");
     if (hasSession && definition && !specialized && definition.level !== "atom") {
       this.feedback.textContent += definition.level === "chain"
-        ? " This condition applies to whole chains containing selected atoms."
-        : " This condition applies to whole residues containing selected atoms.";
+        ? t(" This condition applies to whole chains containing selected atoms.")
+        : t(" This condition applies to whole residues containing selected atoms.");
     }
   }
 
@@ -183,12 +184,12 @@ export class ConditionController {
     this.conditionValue.replaceChildren();
     if (definition?.editor_group) {
       const label = document.createElement("label");
-      label.textContent = "Residue type";
+      label.textContent = t("Residue type");
       const select = document.createElement("select");
       select.id = "condition-residue-type";
       for (const [name, option] of Object.entries(this.schema!.conditions)) {
         if (option.editor_group === definition.editor_group) {
-          select.add(new Option(option.option_label ?? option.label, name));
+          select.add(new Option(t(option.option_label ?? option.label), name));
         }
       }
       if ([...select.options].some((option) => option.value === previousOption)) select.value = previousOption!;
@@ -197,13 +198,13 @@ export class ConditionController {
     }
     if (definition?.invert_mask) {
       const description = document.createElement("p");
-      description.textContent = "All residues are indexed by default. Only explicitly unindexed residues are listed under Conditions on this structure.";
+      description.textContent = t("All residues are indexed by default. Only explicitly unindexed residues are listed under Conditions on this structure.");
       this.conditionValue.append(description);
       for (const enabled of [true, false]) {
         const button = document.createElement("button");
         button.type = "button";
         button.id = enabled ? "unindex-selection" : "restore-indexing";
-        button.textContent = enabled ? "Unindex selection" : "Restore indexing";
+        button.textContent = enabled ? t("Unindex selection") : t("Restore indexing");
         button.dataset.needsSelection = "true";
         button.addEventListener("click", () => {
           void this.options.mutate("/conditions", {
@@ -218,18 +219,18 @@ export class ConditionController {
     }
     if (definition?.group_editor) {
       const label = document.createElement("label");
-      label.textContent = "Group";
+      label.textContent = t("Group");
       const select = document.createElement("select");
       select.id = "condition-group";
       const groups = this.state.groups[this.conditionSelect.value] ?? [];
-      if (!groups.length) select.add(new Option("No groups yet — create one from a selection", ""));
+      if (!groups.length) select.add(new Option(t("No groups yet — create one from a selection"), ""));
       select.disabled = groups.length === 0;
-      for (const group of groups) select.add(new Option(`Group ${group.id} (${group.count} atoms)`, String(group.id)));
+      for (const group of groups) select.add(new Option(t("Group {0} ({1} atoms)", [group.id, group.count]), String(group.id)));
       if (groups.some((group) => String(group.id) === previousGroup)) select.value = previousGroup!;
       label.append(select);
       this.conditionValue.append(label);
-      for (const [action, text] of [["new", "New group from selection"], ["add", "Add selection to group"],
-        ["remove", "Remove selection from any group"], ["delete", "Delete group"]]) {
+      for (const [action, text] of [["new", t("New group from selection")], ["add", t("Add selection to group")],
+        ["remove", t("Remove selection from any group")], ["delete", t("Delete group")]]) {
         const button = document.createElement("button");
         button.id = `group-${action}`;
         button.textContent = text;
@@ -260,13 +261,13 @@ export class ConditionController {
     label.hidden = !this.enabledInput.checked;
     label.textContent =
       definition.kind === "vector3"
-        ? "Centroid (x, y, z)"
-        : "Value";
+        ? t("Centroid (x, y, z)")
+        : t("Value");
     if (definition.kind === "enum") {
       const select = document.createElement("select");
       select.id = "condition-value-input";
       for (const [name, value] of Object.entries(definition.values ?? {})) {
-        if (value !== definition.default) select.add(new Option(name, String(value)));
+        if (value !== definition.default) select.add(new Option(t(name), String(value)));
       }
       label.appendChild(select);
     } else if (definition.kind === "integer" || definition.kind === "scalar") {
@@ -317,7 +318,7 @@ export class ConditionController {
     const decimals = definition?.decimals ?? 1;
     const entries = this.state.centroids[this.conditionSelect.value] ?? [];
     const label = document.createElement("label");
-    label.textContent = "Chain";
+    label.textContent = t("Chain");
     const chain = document.createElement("select");
     chain.id = "centroid-chain";
     for (const entry of entries) chain.add(new Option(entry.chain, entry.chain));
@@ -337,16 +338,16 @@ export class ConditionController {
     const saved = document.createElement("p");
     const load = () => {
       const target = entries.find((entry) => entry.chain === chain.value)?.target;
-      saved.textContent = target ? `Saved target: ${target.map((v) => v.toFixed(decimals)).join(", ")} Å` : "No saved centroid target.";
+      saved.textContent = target ? t("Saved target: {0} Å", [target.map((v) => v.toFixed(decimals)).join(", ")]) : t("No saved centroid target.");
       inputs.forEach((input, i) => { input.value = (target?.[i] ?? 0).toFixed(decimals); });
     };
     chain.addEventListener("change", load); load();
     this.conditionValue.append(saved);
     const fill = document.createElement("button");
-    fill.id = "centroid-fill"; fill.textContent = "Fill with current centroid";
+    fill.id = "centroid-fill"; fill.textContent = t("Fill with current centroid");
     fill.addEventListener("click", () => {
       const current = entries.find((entry) => entry.chain === chain.value)?.current;
-      if (!current) { this.setFeedback("This chain has no resolved coordinates.", true); return; }
+      if (!current) { this.setFeedback(t("This chain has no resolved coordinates."), true); return; }
       inputs.forEach((input, i) => { input.value = current[i].toFixed(decimals); });
     });
     this.conditionValue.append(fill);
@@ -357,15 +358,15 @@ export class ConditionController {
       this.markersVisible = markerToggle.checked;
       this.options.onMarkersChanged();
     });
-    markerLabel.append(markerToggle, "Show centroid markers"); this.conditionValue.append(markerLabel);
+    markerLabel.append(markerToggle, t("Show centroid markers")); this.conditionValue.append(markerLabel);
     for (const enabled of [true, false]) {
       const button = document.createElement("button");
       button.id = enabled ? "centroid-set" : "centroid-clear";
-      button.textContent = enabled ? "Set centroid for chain" : "Clear centroid for chain";
+      button.textContent = enabled ? t("Set centroid for chain") : t("Clear centroid for chain");
       button.disabled = !entries.length;
       button.addEventListener("click", () => {
         if (enabled && inputs.some((input) => !input.value || !input.checkValidity())) {
-          this.setFeedback("Enter three finite coordinates.", true); return;
+          this.setFeedback(t("Enter three finite coordinates."), true); return;
         }
         void this.options.mutate("/centroids", {
           condition: this.conditionSelect.value, chain: chain.value,
@@ -381,9 +382,9 @@ export class ConditionController {
     const note = document.createElement("p");
     note.id = "pair-draft-status";
     note.textContent = this.pairDirty && this.pairDraftRevision !== this.revision
-      ? "The structure changed. This draft is kept for reference; reload saved restraints before editing or applying."
-      : "Changes in this table are saved only when you click Apply restraints.";
-    const reload = document.createElement("button"); reload.textContent = "Reload saved restraints";
+      ? t("The structure changed. This draft is kept for reference; reload saved restraints before editing or applying.")
+      : t("Changes in this table are saved only when you click Apply restraints.");
+    const reload = document.createElement("button"); reload.textContent = t("Reload saved restraints");
     reload.id = "pair-reload";
     reload.addEventListener("click", () => {
       this.pairDirty = false; this.pairs = [...this.state.restraints]; this.pairDraftRevision = this.revision;
@@ -392,52 +393,53 @@ export class ConditionController {
     this.conditionValue.append(note, reload);
     for (const slot of [0, 1]) {
       const label = document.createElement("p"); label.id = `pair-atom-${slot}`;
-      label.textContent = `Atom ${slot + 1}: ${this.picked[slot] ?? "—"}`;
+      label.dataset.atomLabel = String(this.picked[slot] ?? "—");
+      label.textContent = t("Atom {0}: {1}", [slot + 1, label.dataset.atomLabel]);
       const pick = document.createElement("button"); pick.id = `pair-pick-${slot}`;
-      pick.textContent = `Select Atom ${slot + 1}`;
+      pick.textContent = t("Select Atom {0}", [slot + 1]);
       pick.addEventListener("click", () => {
         this.picking = this.picking === slot ? null : slot;
-        this.setFeedback(this.picking === null ? "Picking cancelled." : `Click atom ${slot + 1} in the viewer.`);
+        this.setFeedback(this.picking === null ? t("Picking cancelled.") : t("Click atom {0} in the viewer.", [slot + 1]));
       });
       this.conditionValue.append(label, pick);
     }
     const useSelection = document.createElement("button");
-    useSelection.id = "pair-use-selection"; useSelection.textContent = "Use two selected atoms";
+    useSelection.id = "pair-use-selection"; useSelection.textContent = t("Use two selected atoms");
     useSelection.addEventListener("click", () => {
-      if (this.options.selection.size !== 2) { this.setFeedback("Select exactly two atoms.", true); return; }
+      if (this.options.selection.size !== 2) { this.setFeedback(t("Select exactly two atoms."), true); return; }
       this.picked = [...this.options.selection.values];
       void this.updatePairEndpoints();
     });
-    const label = document.createElement("label"); label.textContent = "Target distance (Å)";
+    const label = document.createElement("label"); label.textContent = t("Target distance (Å)");
     const distance = document.createElement("input");
     distance.id = "pair-distance"; distance.type = "number"; distance.min = "0.01"; distance.step = "0.01"; distance.value = "4";
     label.append(distance);
-    const actual = document.createElement("button"); actual.id = "pair-actual"; actual.textContent = "Use actual distance";
+    const actual = document.createElement("button"); actual.id = "pair-actual"; actual.textContent = t("Use actual distance");
     actual.addEventListener("click", () => void this.updatePairEndpoints(true));
-    const add = document.createElement("button"); add.id = "pair-add"; add.textContent = "Add Pair";
+    const add = document.createElement("button"); add.id = "pair-add"; add.textContent = t("Add Pair");
     add.disabled = this.pairDirty && this.pairDraftRevision !== this.revision;
     add.addEventListener("click", () => {
       const [atom1, atom2] = this.picked;
       if (atom1 === null || atom2 === null || atom1 === atom2 || !distance.value || !distance.checkValidity()) {
-        this.setFeedback("Pick two different atoms and enter a positive distance.", true); return;
+        this.setFeedback(t("Pick two different atoms and enter a positive distance."), true); return;
       }
       this.pairs.push({ atom1, atom2, distance: Number(distance.value), current_distance: null,
-        atom1_label: element(`pair-atom-0`).textContent!.replace(/^Atom 1: /, ""),
-        atom2_label: element(`pair-atom-1`).textContent!.replace(/^Atom 2: /, ""),
+        atom1_label: element("pair-atom-0").dataset.atomLabel ?? String(atom1),
+        atom2_label: element("pair-atom-1").dataset.atomLabel ?? String(atom2),
       });
       this.pairDirty = true;
       this.renderPairTable();
     });
     const table = document.createElement("table"); table.id = "pair-table";
-    const remove = document.createElement("button"); remove.id = "pair-delete"; remove.textContent = "Delete Selected";
+    const remove = document.createElement("button"); remove.id = "pair-delete"; remove.textContent = t("Delete Selected");
     remove.addEventListener("click", () => {
       if (this.selectedPair !== null) this.pairs.splice(this.selectedPair, 1);
       this.pairDirty = true;
       this.selectedPair = null; this.renderPairTable();
     });
-    const clear = document.createElement("button"); clear.id = "pair-clear"; clear.textContent = "Clear All";
+    const clear = document.createElement("button"); clear.id = "pair-clear"; clear.textContent = t("Clear All");
     clear.addEventListener("click", async () => { this.pairs = []; this.pairDirty = true; this.selectedPair = null; this.renderPairTable(); });
-    const apply = document.createElement("button"); apply.id = "pair-apply"; apply.textContent = "Apply restraints";
+    const apply = document.createElement("button"); apply.id = "pair-apply"; apply.textContent = t("Apply restraints");
     apply.disabled = this.pairDirty && this.pairDraftRevision !== this.revision;
     apply.addEventListener("click", () => {
       this.pairApplyPending = true;
@@ -465,7 +467,7 @@ export class ConditionController {
     const table = element<HTMLTableElement>("pair-table");
     table.replaceChildren();
     const header = table.createTHead().insertRow();
-    for (const label of ["Pair", "Target (Å)", "Current (Å)"]) {
+    for (const label of [t("Pair"), t("Target (Å)"), t("Current (Å)")]) {
       const cell = document.createElement("th"); cell.textContent = label; header.append(cell);
     }
     const body = table.createTBody();
@@ -499,10 +501,12 @@ export class ConditionController {
       if (session !== this.options.getSessionId() || revision !== this.options.getRevision() ||
           result.revision !== revision || atom1 !== this.picked[0] || atom2 !== this.picked[1] ||
           this.currentDefinition()?.kind !== "pair") return;
-      element("pair-atom-0").textContent = `Atom 1: ${atom1 === null ? "—" : result.atom1_label}`;
-      element("pair-atom-1").textContent = `Atom 2: ${atom2 === null ? "—" : result.atom2_label}`;
+      element("pair-atom-0").dataset.atomLabel = atom1 === null ? "—" : result.atom1_label;
+      element("pair-atom-1").dataset.atomLabel = atom2 === null ? "—" : result.atom2_label;
+      element("pair-atom-0").textContent = t("Atom 1: {0}", [atom1 === null ? "—" : result.atom1_label]);
+      element("pair-atom-1").textContent = t("Atom 2: {0}", [atom2 === null ? "—" : result.atom2_label]);
       if (useDistance && atom1 !== null && atom2 !== null) {
-        if (result.distance === null) this.setFeedback("The selected atoms have unresolved coordinates.", true);
+        if (result.distance === null) this.setFeedback(t("The selected atoms have unresolved coordinates."), true);
         else element<HTMLInputElement>("pair-distance").value = result.distance.toFixed(2);
       }
     } catch (error) { this.setFeedback(String(error), true); }

@@ -1,3 +1,4 @@
+import { t } from "./i18n/index.ts";
 import type { paths } from "./generated/api";
 
 export type StudioApiPaths = paths;
@@ -45,7 +46,7 @@ async function request(path: string, init: ApiRequestInit = {}): Promise<Respons
   const timer = timeoutMs > 0
     ? setTimeout(() => {
         timedOut = true;
-        controller.abort(new DOMException("Request timed out", "TimeoutError"));
+        controller.abort(new DOMException(t("Request timed out"), "TimeoutError"));
       }, timeoutMs)
     : undefined;
 
@@ -69,13 +70,13 @@ async function request(path: string, init: ApiRequestInit = {}): Promise<Respons
   } catch (error) {
     if (error instanceof ApiError) throw error;
     if (timedOut) {
-      throw new ApiError(`Request timed out after ${timeoutMs} ms`, 0, path, "timeout", error);
+      throw new ApiError(t("Request timed out after {0} ms", [timeoutMs]), 0, path, "timeout", error);
     }
     if (callerSignal?.aborted || controller.signal.aborted) {
-      throw new ApiError("Request was aborted", 0, path, "aborted", error);
+      throw new ApiError(t("Request was aborted"), 0, path, "aborted", error);
     }
     throw new ApiError(
-      error instanceof Error ? error.message : "Network request failed",
+      error instanceof Error ? error.message : t("Network request failed"),
       0,
       path,
       "network",
@@ -92,7 +93,7 @@ export async function api<T>(path: string, init?: ApiRequestInit): Promise<T> {
   try {
     return (await response.json()) as T;
   } catch (error) {
-    throw new ApiError("API returned invalid JSON", response.status, path, "parse", error);
+    throw new ApiError(t("API returned invalid JSON"), response.status, path, "parse", error);
   }
 }
 

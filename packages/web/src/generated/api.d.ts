@@ -61,6 +61,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/import/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * V1 Convert Uploaded Structure
+         * @description Convert an uploaded PDB to CIF for the browser's lossless CIF core.
+         */
+        post: operations["v1_convert_uploaded_structure_api_v1_import_convert_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/import/inspect": {
         parameters: {
             query?: never;
@@ -680,6 +700,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Body_v1_convert_uploaded_structure_api_v1_import_convert_post */
+        Body_v1_convert_uploaded_structure_api_v1_import_convert_post: {
+            /** File */
+            file: string;
+        };
         /** Body_v1_create_session_api_v1_sessions_post */
         Body_v1_create_session_api_v1_sessions_post: {
             /**
@@ -1075,6 +1100,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    v1_convert_uploaded_structure_api_v1_import_convert_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_v1_convert_uploaded_structure_api_v1_import_convert_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

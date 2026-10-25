@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { element } from "../dom";
 import type { MolecularViewer } from "../viewers";
 
@@ -31,7 +32,7 @@ export class TrajectoryController {
     this.play.addEventListener("click", () => {
       if (this.playing) { this.pause(); return; }
       this.playing = true;
-      this.play.textContent = "Pause";
+      this.play.textContent = t("Pause");
       void this.tick();
     }, { signal: this.events.signal });
     this.slider.addEventListener("input", () => {
@@ -49,7 +50,7 @@ export class TrajectoryController {
   private pause(): void {
     window.clearTimeout(this.timer);
     this.playing = false;
-    this.play.textContent = "Play";
+    this.play.textContent = t("Play");
   }
 
   private lockEditor(locked: boolean): void {
@@ -68,14 +69,14 @@ export class TrajectoryController {
         await this.restore();
         this.active = false;
         this.controls.hidden = true;
-        this.toggle.textContent = "Show trajectory";
+        this.toggle.textContent = t("Show trajectory");
         this.toggle.setAttribute("aria-pressed", "false");
         this.lockEditor(false);
         return;
       }
       if (!this.cif) {
         const response = await fetch(url);
-        if (!response.ok) throw new Error(`Cannot load trajectory (${response.status})`);
+        if (!response.ok) throw new Error(t("Cannot load trajectory ({0})", [response.status]));
         this.cif = await response.text();
       }
       this.active = true;
@@ -88,9 +89,9 @@ export class TrajectoryController {
       this.viewer.camera("reset");
       await this.showFrame(0);
       this.controls.hidden = false;
-      this.toggle.textContent = "Back to design";
+      this.toggle.textContent = t("Back to design");
       this.toggle.setAttribute("aria-pressed", "true");
-      this.log("Backbone trajectory · predicted clean structures · view only");
+      this.log(t("Backbone trajectory · predicted clean structures · view only"));
     } catch (error) {
       if (this.active) {
         await this.restore();
@@ -110,7 +111,7 @@ export class TrajectoryController {
       await this.viewer.setTrajectoryFrame(index);
       this.frame = index;
       this.slider.value = String(index);
-      this.label.value = `Frame ${index + 1} / ${this.viewer.trajectoryFrameCount}`;
+      this.label.value = t("Frame {0} / {1}", [index + 1, this.viewer.trajectoryFrameCount]);
     } catch (error) {
       this.pause();
       this.log(String(error), "error");

@@ -35,6 +35,7 @@ from .contracts import (
 )
 from .core import BOND_TYPES, INTERACTION_TYPES, StudioDocument
 from .identity import current_owner, reset_current_owner, set_current_owner
+from .importing import SUPPORTED_STRUCTURE_SUFFIXES, structure_to_cif
 from .version import __version__
 
 LOGGER = logging.getLogger("atomworks_studio")
@@ -578,14 +579,33 @@ def schema() -> dict:
     }
 
 
-@app.post("/api/import/inspect")
-async def inspect_uploaded_import(file: UploadFile = File(...)) -> dict:
+async def _read_structure_upload(file: UploadFile) -> tuple[str, str]:
+    filename = Path(file.filename or "structure.cif").name
+    if Path(filename).suffix.lower() not in SUPPORTED_STRUCTURE_SUFFIXES:
+        await file.close()
+        raise HTTPException(status_code=415, detail="Only PDB, ENT, CIF and mmCIF uploads are accepted")
     content = await file.read(MAX_UPLOAD_BYTES + 1)
     await file.close()
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail=f"upload exceeds {MAX_UPLOAD_BYTES // 1024 // 1024} MiB")
     try:
-        return inspect_import(StringIO(content.decode("utf-8")), file_type="cif")
+        return filename, structure_to_cif(content.decode("utf-8"), filename)
+    except Exception as error:
+        raise HTTPException(status_code=422, detail=f"Cannot read structure: {error}") from error
+
+
+@app.post("/api/import/convert")
+async def convert_uploaded_structure(file: UploadFile = File(...)) -> dict[str, str]:
+    """Convert an uploaded PDB to CIF for the browser's lossless CIF core."""
+    filename, text = await _read_structure_upload(file)
+    return {"name": f"{Path(filename).stem}.cif", "cif": text}
+
+
+@app.post("/api/import/inspect")
+async def inspect_uploaded_import(file: UploadFile = File(...)) -> dict:
+    _filename, text = await _read_structure_upload(file)
+    try:
+        return inspect_import(StringIO(text), file_type="cif")
     except Exception as error:
         raise HTTPException(status_code=422, detail=f"Cannot inspect CIF: {error}") from error
 
@@ -600,15 +620,8 @@ async def create_session(
     hydrogen_policy: Literal["keep", "remove"] | None = Form(None),
     advanced_options: str = Form("{}"),
 ) -> dict:
-    filename = Path(file.filename or "structure.cif").name
-    if not filename.lower().endswith((".cif", ".mmcif")):
-        raise HTTPException(status_code=415, detail="only CIF/mmCIF uploads are accepted")
-    content = await file.read(MAX_UPLOAD_BYTES + 1)
-    await file.close()
-    if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail=f"upload exceeds {MAX_UPLOAD_BYTES // 1024 // 1024} MiB")
+    filename, text = await _read_structure_upload(file)
     try:
-        text = content.decode("utf-8")
         document = StudioDocument.from_cif(
             text,
             Path(filename).stem,

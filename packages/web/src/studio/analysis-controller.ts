@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { api, postJson } from "../api";
 import { closeToolbarMenus, element } from "../dom";
 import type { SelectionController } from "../selection-controller";
@@ -44,7 +45,7 @@ export class AnalysisController {
       void this.options.viewer().clearInteractions().then(() => {
         this.results.replaceChildren();
         this.options.renderViewerDrawers();
-        this.options.log("Interaction visuals cleared; user measurements were preserved.");
+        this.options.log(t("Interaction visuals cleared; user measurements were preserved."));
       });
     });
     this.inspectBondsButton.addEventListener("click", () => void this.inspectBonds());
@@ -59,8 +60,8 @@ export class AnalysisController {
     const viewer = this.options.viewer();
     button.disabled = !hasSession || !viewer.initialized || !viewer.capabilities.measurements;
     button.textContent = this.options.selection.size === required
-      ? "Add measurement"
-      : `Pick ${required} atoms`;
+      ? t("Add measurement")
+      : t("Pick {0} atoms", [required]);
   }
 
   async handleAtomPicked(atomIndex: number, label?: string): Promise<boolean> {
@@ -70,8 +71,8 @@ export class AnalysisController {
     this.options.selection.replace(this.draft.atomIndices);
     if (this.draft.atomIndices.length < required) {
       this.options.log(
-        `${label ?? `Atom ${atomIndex}`} added to ${this.draft.kind}; `
-        + `pick ${required - this.draft.atomIndices.length} more.`,
+        t("{0} added to {1}; ", [label ?? `Atom ${atomIndex}`, this.draft.kind])
+        + t("pick {0} more.", [required - this.draft.atomIndices.length]),
       );
       return true;
     }
@@ -81,9 +82,9 @@ export class AnalysisController {
       await this.options.viewer().addMeasurement(request);
       this.options.renderViewerDrawers();
       this.openMeasurementsDrawer();
-      this.options.log(`${request.kind} measurement added and visualized.`);
+      this.options.log(t("{0} measurement added and visualized.", [request.kind]));
     } catch (error) {
-      this.options.log(`Measurement failed: ${String(error)}`, "error");
+      this.options.log(t("Measurement failed: {0}", [String(error)]), "error");
     }
     this.options.onSelectionUiChange();
     return true;
@@ -96,14 +97,14 @@ export class AnalysisController {
     if (atoms.length !== required) {
       this.draft = { kind, atomIndices: [] };
       closeToolbarMenus();
-      this.options.log(`${kind} measurement armed: pick ${required} atoms in order.`);
+      this.options.log(t("{0} measurement armed: pick {1} atoms in order.", [kind, required]));
       return;
     }
     void this.options.viewer().addMeasurement({ kind, atomIndices: atoms }).then(() => {
       this.options.renderViewerDrawers();
       this.openMeasurementsDrawer();
-      this.options.log(`${kind} measurement added and visualized.`);
-    }).catch((error) => this.options.log(`Measurement failed: ${String(error)}`, "error"));
+      this.options.log(t("{0} measurement added and visualized.", [kind]));
+    }).catch((error) => this.options.log(t("Measurement failed: {0}", [String(error)]), "error"));
   }
 
   private async runInteractionAnalysis(): Promise<void> {
@@ -113,13 +114,13 @@ export class AnalysisController {
       ...document.querySelectorAll<HTMLInputElement>('input[name="interaction-type"]:checked'),
     ].map((input) => input.value);
     if (!interactionTypes.length) {
-      this.options.log("Choose at least one interaction type.");
+      this.options.log(t("Choose at least one interaction type."));
       return;
     }
     const selectedAtoms = [...this.options.selection.values];
     const interactionScope = element<HTMLSelectElement>("interaction-scope").value;
     if (interactionScope !== "all" && !selectedAtoms.length) {
-      this.options.log("Select atoms before using Selection contacts scope.");
+      this.options.log(t("Select atoms before using Selection contacts scope."));
       return;
     }
     const selectedSet = new Set(selectedAtoms);
@@ -142,7 +143,7 @@ export class AnalysisController {
       );
       await this.renderInteractionResults(response);
     } catch (error) {
-      this.options.log(`Analysis failed: ${String(error)}`, "error");
+      this.options.log(t("Analysis failed: {0}", [String(error)]), "error");
     }
   }
 
@@ -168,12 +169,12 @@ export class AnalysisController {
     const visualized = element<HTMLInputElement>("visualize-interactions").checked ? overlays.slice(0, visualLimit) : [];
     await this.options.viewer().showInteractions(visualized);
     this.results.replaceChildren();
-    if (!response.interactions.length) this.results.textContent = "No matching interactions found.";
+    if (!response.interactions.length) this.results.textContent = t("No matching interactions found.");
     for (const interaction of response.interactions) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "interaction-result";
-      button.textContent = `${interaction.interaction_type}: atoms ${interaction.atom1}–${interaction.atom2}`
+      button.textContent = t("{0}: atoms {1}–{2}", [interaction.interaction_type, interaction.atom1, interaction.atom2])
         + ` · ${interaction.distance.toFixed(2)} Å · ${interaction.atom1_role}/${interaction.atom2_role}`;
       button.addEventListener("click", () => {
         this.options.selection.replace([interaction.atom1, interaction.atom2], true);
@@ -185,8 +186,8 @@ export class AnalysisController {
     element<HTMLDetailsElement>("interactions-drawer").open = true;
     this.options.renderViewerDrawers();
     this.options.log(
-      `Interaction analysis completed: ${response.interaction_count} contacts`
-      + `${visualized.length ? `; ${visualized.length} visualized` : ""}`
+      t("Interaction analysis completed: {0} contacts", [response.interaction_count])
+      + `${visualized.length ? t("; {0} visualized", [visualized.length]) : ""}`
       + `${response.cached ? " (cached)" : ""}.`,
     );
   }
@@ -207,7 +208,7 @@ export class AnalysisController {
     if (!sessionId) return;
     const generation = ++this.bondInspectionGeneration;
     this.bondList.hidden = false;
-    this.bondList.textContent = "Loading bonds…";
+    this.bondList.textContent = t("Loading bonds…");
     this.inspectBondsButton.setAttribute("aria-expanded", "true");
     const selected = [...this.options.selection.values];
     const query = selected.length === 1 ? `?atom_index=${selected[0]}` : "";
@@ -219,19 +220,19 @@ export class AnalysisController {
       if (generation !== this.bondInspectionGeneration || sessionId !== this.options.getSessionId()) return;
       const list = this.bondList;
       list.replaceChildren();
-      if (!response.bonds.length) list.textContent = "No bonds found.";
+      if (!response.bonds.length) list.textContent = t("No bonds found.");
       for (const bond of response.bonds) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "interaction-result";
-        button.textContent = `Atoms ${bond.atom1}–${bond.atom2} · ${bond.bond_type}`;
+        button.textContent = t("Atoms {0}–{1} · {2}", [bond.atom1, bond.atom2, bond.bond_type]);
         button.addEventListener("click", () => this.options.selection.replace([bond.atom1, bond.atom2], true));
         list.append(button);
       }
     } catch (error) {
       if (generation !== this.bondInspectionGeneration || sessionId !== this.options.getSessionId()) return;
-      this.bondList.textContent = "Could not load bonds. Close and reopen Inspect bonds to try again.";
-      this.options.log(`Bond inspection failed: ${String(error)}`, "error");
+      this.bondList.textContent = t("Could not load bonds. Close and reopen Inspect bonds to try again.");
+      this.options.log(t("Bond inspection failed: {0}", [String(error)]), "error");
     }
   }
 

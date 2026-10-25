@@ -254,7 +254,7 @@ def test_internal_coordinate_endpoint_rejects_empty_selection() -> None:
 def test_upload_defenses_and_unknown_session() -> None:
     wrong_type = client.post(
         "/api/sessions",
-        files={"file": ("structure.pdb", b"ATOM", "chemical/x-pdb")},
+        files={"file": ("structure.txt", b"ATOM", "text/plain")},
     )
     assert wrong_type.status_code == 415
     assert client.get("/api/sessions/not-a-session").status_code == 404

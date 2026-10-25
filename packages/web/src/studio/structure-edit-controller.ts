@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { api } from "../api";
 import { element } from "../dom";
 import type { SelectionController } from "../selection-controller";
@@ -17,7 +18,7 @@ export class StructureEditController {
 
   initializeBondTypes(bondTypes: string[]): void {
     const select = element<HTMLSelectElement>("bond-type");
-    for (const name of bondTypes) select.add(new Option(name, name));
+    for (const name of bondTypes) select.add(new Option(t(name), name));
   }
 
   bind(): void {
@@ -36,7 +37,7 @@ export class StructureEditController {
     const chargeAction = element<HTMLSelectElement>("charge-action");
     const updateChargeLabel = (): void => {
       element<HTMLButtonElement>("apply-charge").textContent =
-        chargeAction.value === "delta" ? "Add charge delta" : "Set charge";
+        chargeAction.value === "delta" ? t("Add charge delta") : t("Set charge");
     };
     chargeAction.addEventListener("change", updateChargeLabel);
     updateChargeLabel();
@@ -44,8 +45,8 @@ export class StructureEditController {
       const action = chargeAction.value;
       const charge = Number(chargeInput.value);
       this.feedback.textContent =
-        `${action === "delta" ? "Adding" : "Setting"} charge ${charge} on `
-        + `${this.options.selection.size} atom${this.options.selection.size === 1 ? "" : "s"}…`;
+        t("{0} charge {1} on ", [action === "delta" ? "Adding" : "Setting", charge])
+        + t("{0} atom{1}…", [this.options.selection.size, this.options.selection.size === 1 ? "" : "s"]);
       void this.options.mutate("/charges", {
         atom_indices: [...this.options.selection.values],
         value: action === "value" ? charge : null,
@@ -61,7 +62,7 @@ export class StructureEditController {
       element(`${action}-bond`).addEventListener("click", () => {
         const [atom1, atom2] = [...this.options.selection.values];
         this.feedback.textContent =
-          `${action === "add" ? "Adding" : "Removing"} bond ${atom1}–${atom2}…`;
+          t("{0} bond {1}–{2}…", [action === "add" ? "Adding" : "Removing", atom1, atom2]);
         void this.options.mutate("/bonds", {
           atom1,
           atom2,
@@ -114,8 +115,8 @@ export class StructureEditController {
     element<HTMLButtonElement>("add-bond").disabled = !hasSession || count !== 2;
     element<HTMLButtonElement>("remove-bond").disabled = !hasSession || count !== 2;
     this.feedback.textContent = !hasSession
-      ? "Open a structure to begin."
-      : `${count} atom${count === 1 ? "" : "s"} selected`;
+      ? t("Open a structure to begin.")
+      : t("{0} atom{1} selected", [count, count === 1 ? "" : "s"]);
   }
 
   updateNextChainId(nextChainId: string): void {
@@ -135,10 +136,10 @@ export class StructureEditController {
       this.options.log(
         result.issues.length
           ? result.issues.map((issue) => `${issue.check}: ${issue.message}`).join("\n")
-          : "Validation passed.",
+          : t("Validation passed."),
       );
     } catch (error) {
-      this.options.log(`Validation failed: ${String(error)}`, "error");
+      this.options.log(t("Validation failed: {0}", [String(error)]), "error");
     }
   }
 }

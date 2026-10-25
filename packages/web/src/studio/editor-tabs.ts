@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { element } from "../dom";
 import type { StudioSchema } from "../types";
 
@@ -7,7 +8,7 @@ export function initializeEditorTabs(tabs: StudioSchema["editor_tabs"]): void {
   const list = document.createElement("div");
   list.className = "editor-tabs";
   list.setAttribute("role", "tablist");
-  list.setAttribute("aria-label", "Structure editor");
+  list.setAttribute("aria-label", t("Structure editor"));
   const buttons: HTMLButtonElement[] = [];
   const panels: HTMLElement[] = [];
   const activate = (index: number): void => {
@@ -21,7 +22,7 @@ export function initializeEditorTabs(tabs: StudioSchema["editor_tabs"]): void {
     const button = document.createElement("button");
     button.type = "button";
     button.id = `editor-tab-${id}`;
-    button.textContent = label;
+    button.textContent = t(label);
     button.setAttribute("role", "tab");
     button.setAttribute("aria-controls", `editor-panel-${id}`);
     button.addEventListener("click", () => activate(index));

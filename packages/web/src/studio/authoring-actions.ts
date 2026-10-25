@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { api, ApiError } from "../api.ts";
 import { confirmAction } from "../confirmation.ts";
 import type { StructureSummary } from "../types.ts";
@@ -20,9 +21,9 @@ export async function prepareCifDownload(
   });
   if (!isCurrent()) return null;
   if (result.issues.length && !await confirm(
-    "Validation issues found:\n\n"
+    t("Validation issues found:\n\n")
     + result.issues.map((issue) => `• [${issue.check}] ${issue.message}`).join("\n")
-    + "\n\nSave anyway?", "Save anyway", "Validation findings",
+    + t("\n\nSave anyway?"), t("Save anyway"), t("Validation findings"),
   )) return null;
   return isCurrent() ? result : null;
 }
@@ -48,9 +49,9 @@ export async function mutateWithConfirmation<T>(
       || detail?.code !== "target_discard_confirmation_required"
       || !Number.isInteger(detail.lost_target_count) || !Number.isInteger(detail.revision)) throw error;
     if (!isCurrent() || !await confirm(
-      `This edit clears saved targets for ${detail.lost_target_count} atoms in affected coordinate groups, `
-      + "including group members outside the selection. New targets will be taken from the structure "
-      + "when model inputs are prepared. Undo restores the saved targets.", "Discard and apply",
+      t("This edit clears saved targets for {0} atoms in affected coordinate groups, ", [detail.lost_target_count])
+      + t("including group members outside the selection. New targets will be taken from the structure ")
+      + t("when model inputs are prepared. Undo restores the saved targets."), t("Discard and apply"),
     ) || !isCurrent()) return null;
     return api<T>(path, {
       ...request,

@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { api, apiText, ApiError } from "../api";
 import { confirmAction } from "../confirmation";
 import { element } from "../dom";
@@ -31,11 +32,11 @@ export class SessionFileController {
     this.loadFields = schema.fields;
     const container = element("parse-fields");
     for (const [name, field] of Object.entries(schema.fields)) {
-      const label = document.createElement("label"); label.textContent = field.label;
+      const label = document.createElement("label"); label.textContent = t(field.label);
       const input = document.createElement(field.kind === "choice" ? "select" : "input");
       input.id = `parse-${name}`;
       if (input instanceof HTMLSelectElement) {
-        for (const choice of field.choices ?? []) input.add(new Option(choice, choice));
+        for (const choice of field.choices ?? []) input.add(new Option(t(choice), choice));
       } else {
         input.type = field.kind === "boolean" ? "checkbox" : field.kind === "integer" ? "number" : "text";
         if (field.kind === "integer") { input.min = "0"; input.step = "1"; }
@@ -44,7 +45,7 @@ export class SessionFileController {
       label.append(input); container.append(label);
     }
     const warning = document.createElement("p");
-    warning.textContent = "Loading without saved annotations discards the existing conditions in this CIF.";
+    warning.textContent = t("Loading without saved annotations discards the existing conditions in this CIF.");
     container.append(warning);
     const annotations = element<HTMLInputElement>("parse-load_standard_annotations");
     annotations.addEventListener("change", () => { warning.hidden = annotations.checked; });
@@ -52,10 +53,10 @@ export class SessionFileController {
     const apply = () => {
       element("parse-manual").hidden = preset.value !== "manual";
       element("parse-description").textContent = {
-        auto: "Infer a preset from the file",
-        minimal: "Keep saved StandardAnnotations and the existing atom list.",
-        rcsb: "Discard saved annotations and prepare the structure, including adding missing heavy-atom records. Added atoms have no coordinates.",
-        manual: "Customize the settings below. Adding atoms and keeping saved annotations cannot be combined.",
+        auto: t("Infer a preset from the file"),
+        minimal: t("Keep saved StandardAnnotations and the existing atom list."),
+        rcsb: t("Discard saved annotations and prepare the structure, including adding missing heavy-atom records. Added atoms have no coordinates."),
+        manual: t("Customize the settings below. Adding atoms and keeping saved annotations cannot be combined."),
       }[preset.value] ?? "";
       if (preset.value === "manual") return;
       this.manualBase = preset.value === "auto" ? "minimal" : preset.value;
@@ -87,8 +88,8 @@ export class SessionFileController {
   private async closeStructure(): Promise<void> {
     const sessionId = this.options.getSessionId();
     if (!sessionId || !await confirmAction(
-      "Close this document and remove its saved session? Save CIF first if you want to keep your edits. Your original file is unchanged.",
-      "Close structure", "Close structure",
+      t("Close this document and remove its saved session? Save CIF first if you want to keep your edits. Your original file is unchanged."),
+      t("Close structure"), t("Close structure"),
     )) return;
     if (sessionId !== this.options.getSessionId()) return;
     ++this.openGeneration;
@@ -112,7 +113,7 @@ export class SessionFileController {
         window.location.replace(url.href);
       });
     } catch (error) {
-      this.options.log(`Could not close structure: ${String(error)}. The document is still open.`, "error");
+      this.options.log(t("Could not close structure: {0}. The document is still open.", [String(error)]), "error");
     } finally {
       button.disabled = !this.options.getSessionId();
     }
@@ -126,7 +127,7 @@ export class SessionFileController {
       const button = document.createElement("button");
       button.className = "secondary example-load";
       button.dataset.example = example.id;
-      button.textContent = example.label;
+      button.textContent = t(example.label);
       button.addEventListener("click", () => void this.loadExample(example, button));
       container.append(button);
     }
@@ -155,6 +156,16 @@ export class SessionFileController {
     if (!isCurrent()) return false;
     let temporarySession: string | null = null;
     try {
+      if (/\.(pdb|ent)$/i.test(file.name)) {
+        this.options.log(t("Converting {0} from PDB to CIF…", [file.name]));
+        const upload = new FormData();
+        upload.append("file", file);
+        const converted = await api<{ name: string; cif: string }>("/api/import/convert", {
+          method: "POST", body: upload,
+        });
+        if (!isCurrent()) return false;
+        file = new File([converted.cif], converted.name, { type: "chemical/x-mmcif" });
+      }
       const cif = await file.text();
       inspect_cif(cif);
       const form = await this.prepareImport(file, isCurrent);
@@ -173,11 +184,11 @@ export class SessionFileController {
       } else {
         await this.options.onOpened(response);
         temporarySession = null;
-        this.options.log("Native AtomWorks session ready.");
+        this.options.log(t("Native AtomWorks session ready."));
       }
       return true;
     } catch (error) {
-      if (isCurrent()) this.options.log(`${targetSession ? "Combine" : "Open"} failed: ${String(error)}`, "error");
+      if (isCurrent()) this.options.log(t("{0} failed: {1}", [targetSession ? "Combine" : "Open", String(error)]), "error");
       return false;
     } finally {
       if (temporarySession && temporarySession !== this.options.getSessionId()) {
@@ -185,7 +196,7 @@ export class SessionFileController {
           await apiText(`/api/sessions/${temporarySession}`, { method: "DELETE" });
         } catch (error) {
           if (!(error instanceof ApiError && error.status === 404)) {
-            this.options.log(`Could not remove the temporary import session: ${String(error)}`, "error");
+            this.options.log(t("Could not remove the temporary import session: {0}", [String(error)]), "error");
           }
         }
       }
@@ -200,17 +211,17 @@ export class SessionFileController {
       this.appendParseOptions(form);
       return form;
     }
-    this.options.log(`Inspecting ${file.name}…`);
+    this.options.log(t("Inspecting {0}…", [file.name]));
     const inspection = await api<{ preset: string | null; message: string }>("/api/import/inspect", {
       method: "POST", body: form,
     });
     if (!isCurrent()) return null;
     if (inspection.preset) {
       form.append("parse_preset", inspection.preset);
-      this.options.log(inspection.message);
+      this.options.log(t(inspection.message));
       return form;
     }
-    const accepted = await this.chooseImportOptions(inspection.message, form);
+    const accepted = await this.chooseImportOptions(t(inspection.message), form);
     return accepted && isCurrent() ? form : null;
   }
 
@@ -220,9 +231,9 @@ export class SessionFileController {
       this.importDialog = dialog;
       dialog.className = "confirmation import-dialog";
       dialog.setAttribute("aria-labelledby", "import-title");
-      dialog.innerHTML = '<h2 id="import-title">Choose how to import this file</h2><p></p>'
-        + '<form method="dialog"><button value="cancel" class="secondary" autofocus>Cancel</button>'
-        + '<button value="import" disabled>Import</button></form>';
+      dialog.innerHTML = `<h2 id="import-title">${t("Choose how to import this file")}</h2><p></p>`
+        + `<form method="dialog"><button value="cancel" class="secondary" autofocus>${t("Cancel")}</button>`
+        + `<button value="import" disabled>${t("Import")}</button></form>`;
       dialog.querySelector("p")!.textContent = message;
       const preset = element<HTMLSelectElement>("parse-preset");
       const settings = element("import-settings");
@@ -235,8 +246,8 @@ export class SessionFileController {
       const automatic = preset.querySelector<HTMLOptionElement>('option[value="auto"]')!;
       const automaticLabel = automatic.text;
       automatic.disabled = true;
-      automatic.text = "Choose a preset or Custom";
-      settings.querySelector<HTMLElement>("#parse-description")!.textContent = "Choose how to handle this file before importing.";
+      automatic.text = t("Choose a preset or Custom");
+      settings.querySelector<HTMLElement>("#parse-description")!.textContent = t("Choose how to handle this file before importing.");
       const update = () => { dialog.querySelector<HTMLButtonElement>('button[value="import"]')!.disabled = preset.value === "auto"; };
       preset.addEventListener("change", update);
       dialog.querySelector("form")!.addEventListener("submit", (event) => {
@@ -272,12 +283,12 @@ export class SessionFileController {
 
     for (const [name, field] of Object.entries(this.loadFields)) {
       const input = element<HTMLInputElement>(`parse-${name}`);
-      if (!input.checkValidity()) throw new Error(`Invalid ${field.label}`);
+      if (!input.checkValidity()) throw new Error(t("Invalid {0}", [t(field.label)]));
       options[name] = field.kind === "boolean" ? input.checked
         : field.kind === "integer" ? (input.value === "" ? null : Number(input.value)) : input.value;
     }
     if (options.load_standard_annotations && (options.add_missing_atoms || options.convert_mse_to_met)) {
-      throw new Error("Keeping saved annotations cannot be combined with adding atoms or converting MSE to MET.");
+      throw new Error(t("Keeping saved annotations cannot be combined with adding atoms or converting MSE to MET."));
     }
     form.set("parse_preset", this.manualBase);
     form.set("assembly", element<HTMLInputElement>("parse-assembly").value.trim() || "asym");
@@ -291,16 +302,16 @@ export class SessionFileController {
     const buttons = [...document.querySelectorAll<HTMLButtonElement>(".example-load")];
     for (const button of buttons) button.disabled = true;
     const originalLabel = activeButton.textContent;
-    activeButton.textContent = "Loading…";
+    activeButton.textContent = t("Loading…");
     try {
       const loaded = await this.openFile(
         new File([await apiText(`/api/examples/${example.id}/cif`)], example.file, { type: "chemical/x-mmcif" }),
       );
       if (!loaded) return;
-      this.options.log(`Loaded ${example.label}.`);
+      this.options.log(t("Loaded {0}.", [t(example.label)]));
       window.dispatchEvent(new CustomEvent("studio-example-loaded", { detail: example }));
     } catch (error) {
-      this.options.log(`Example failed: ${String(error)}`, "error");
+      this.options.log(t("Example failed: {0}", [String(error)]), "error");
     } finally {
       activeButton.textContent = originalLabel;
       for (const button of buttons) button.disabled = false;
@@ -319,10 +330,10 @@ export class SessionFileController {
     const button = element<HTMLButtonElement>("download");
     button.disabled = true;
     try {
-      this.options.log("Validating structure before saving…");
+      this.options.log(t("Validating structure before saving…"));
       const result = await prepareCifDownload(sessionId, () => sessionId === this.options.getSessionId());
       if (!result) {
-        this.options.log("Save cancelled.");
+        this.options.log(t("Save cancelled."));
         return;
       }
       const blob = new Blob([result.cif], { type: "chemical/x-mmcif" });
@@ -331,9 +342,9 @@ export class SessionFileController {
       anchor.download = `${result.name}_annotated.cif`;
       anchor.click();
       URL.revokeObjectURL(anchor.href);
-      this.options.log(result.issues.length ? "Saved with validation issues." : "Validation passed. Structure saved.");
+      this.options.log(result.issues.length ? t("Saved with validation issues.") : t("Validation passed. Structure saved."));
     } catch (error) {
-      this.options.log(`Download failed: ${String(error)}`, "error");
+      this.options.log(t("Download failed: {0}", [String(error)]), "error");
     } finally {
       button.disabled = this.options.getSessionId() === null;
     }

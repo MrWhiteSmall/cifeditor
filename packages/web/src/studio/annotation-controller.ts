@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.ts";
 import { api, ApiError } from "../api";
 import { AnnotationOverlayState } from "../annotation-overlay";
 import { element } from "../dom";
@@ -42,10 +43,10 @@ export class AnnotationController {
         if (session !== this.options.getSessionId()) return;
         await this.overlay.clear(this.options.viewer(), this.options.selection.values);
         if (generation !== this.inspectionGeneration) return;
-        this.detail.textContent = "Condition colors cleared. Choose a condition or click an atom to see its values.";
+        this.detail.textContent = t("Condition colors cleared. Choose a condition or click an atom to see its values.");
       });
     } catch (error) {
-      this.options.log(`Could not clear annotation colors: ${String(error)}`, "error");
+      this.options.log(t("Could not clear annotation colors: {0}", [String(error)]), "error");
     }
   }
 
@@ -53,20 +54,20 @@ export class AnnotationController {
     this.list.replaceChildren();
     if (!annotations.length) {
       this.list.className = "annotation-list muted";
-      this.list.textContent = "No non-default conditions are stored on this structure.";
-      this.detail.textContent = "Pick an atom in the molecular viewer to inspect it.";
+      this.list.textContent = t("No non-default conditions are stored on this structure.");
+      this.detail.textContent = t("Pick an atom in the molecular viewer to inspect it.");
       return;
     }
     this.list.className = "annotation-list";
     for (const annotation of annotations) {
-      const row = this.appendRow(annotation.label, `${annotation.count} ${annotation.unit}`, (row) => {
+      const row = this.appendRow(t(annotation.label), `${annotation.count} ${t(annotation.unit)}`, (row) => {
         void this.inspectAnnotation(annotation.name, row);
       });
       row.dataset.viewKey = `annotations/${annotation.name}`;
       row.classList.toggle("active", annotation.name === this.activeView);
       row.setAttribute("aria-pressed", String(annotation.name === this.activeView));
     }
-    this.detail.textContent = "Choose a condition to see its values, or click an atom to see its conditions.";
+    this.detail.textContent = t("Choose a condition to see its values, or click an atom to see its conditions.");
   }
 
   async display(annotation: AnnotationSummary, clearSelection = true): Promise<void> {
@@ -102,23 +103,23 @@ export class AnnotationController {
       }>(`/api/sessions/${sessionId}/atoms/${atomIndex}/annotations`);
       if (generation !== this.inspectionGeneration || sessionId !== this.options.getSessionId()) return;
       const lines = [
-        `${atom.chain}/${atom.residue_name} ${atom.residue_id}/${atom.atom_name} (atom ${atom.atom_index})`,
+        t("{0}/{1} {2}/{3} (atom {4})", [atom.chain, atom.residue_name, atom.residue_id, atom.atom_name, atom.atom_index]),
         atom.formal_charge
-          ? `Formal charge: ${atom.formal_charge > 0 ? "+" : ""}${atom.formal_charge}`
+          ? t("Formal charge: {0}{1}", [atom.formal_charge > 0 ? "+" : "", atom.formal_charge])
           : "",
         ...atom.annotations.map((annotation) => {
           const values = annotation.values.map((value) => {
             if (Array.isArray(value.value)) return `${value.label} (${value.value.join(", ")})`;
             return value.label;
           });
-          return `${annotation.label}: ${values.join(", ")}`;
+          return `${t(annotation.label)}: ${values.join(", ")}`;
         }),
       ].filter(Boolean);
-      if (!atom.annotations.length) lines.push("No active conditions on this atom.");
+      if (!atom.annotations.length) lines.push(t("No active conditions on this atom."));
       this.detail.textContent = lines.join("\n");
     } catch (error) {
       if (generation !== this.inspectionGeneration || sessionId !== this.options.getSessionId()) return;
-      this.detail.textContent = `Could not inspect atom: ${String(error)}`;
+      this.detail.textContent = t("Could not inspect atom: {0}", [String(error)]);
     }
   }
 
@@ -146,7 +147,7 @@ export class AnnotationController {
       } else {
         await this.overlay.clear(this.options.viewer(), this.options.selection.values);
         element<HTMLButtonElement>("clear-annotation-view").disabled = true;
-        this.detail.textContent = "This annotation currently has no active values.";
+        this.detail.textContent = t("This annotation currently has no active values.");
       }
       return;
     }
@@ -192,16 +193,16 @@ export class AnnotationController {
 
   private renderDetail(annotation: AnnotationSummary): void {
     const values = annotation.values.filter(value => value.atom_indices?.length);
-    this.detail.textContent = `${annotation.label}: ${annotation.count} ${annotation.unit}\n`;
+    this.detail.textContent = `${t(annotation.label)}: ${annotation.count} ${t(annotation.unit)}\n`;
     if (values.length <= ANNOTATION_PALETTE.length) {
       this.detail.append(values.map((value, index) => this.formatValue(value, index, annotation.unit)).join("\n"));
       return;
     }
     const label = document.createElement("label");
-    label.textContent = "Highlight one group (too many for distinct colors)";
+    label.textContent = t("Highlight one group (too many for distinct colors)");
     const select = document.createElement("select");
     select.id = "annotation-value";
-    for (const value of values) select.add(new Option(`${value.label}: ${value.count} atoms`, value.label));
+    for (const value of values) select.add(new Option(t("{0}: {1} atoms", [value.label, value.count]), value.label));
     select.value = this.activeValue ?? values[0].label;
     select.addEventListener("change", () => {
       const row = this.list.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
@@ -241,7 +242,7 @@ export class AnnotationController {
           this.activateRow(null);
           await this.overlay.clear(this.options.viewer(), this.options.selection.values);
           element<HTMLButtonElement>("clear-annotation-view").disabled = true;
-          this.detail.textContent = "This annotation is no longer active.";
+          this.detail.textContent = t("This annotation is no longer active.");
           return;
         }
         await this.display(annotation);
@@ -252,7 +253,7 @@ export class AnnotationController {
       });
     } catch (error) {
       if (generation !== this.inspectionGeneration || sessionId !== this.options.getSessionId()) return;
-      this.detail.textContent = `Could not inspect annotation: ${String(error)}`;
+      this.detail.textContent = t("Could not inspect annotation: {0}", [String(error)]);
     }
   }
 
