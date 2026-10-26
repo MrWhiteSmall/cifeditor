@@ -21,7 +21,10 @@ if [ ! -x "$python" ]; then
 fi
 # CPU-only wheels avoid downloading CUDA libraries on this editor-only service.
 "$uv" pip install --python "$python" 'torch==2.7.1+cpu' --no-deps --index-url https://download.pytorch.org/whl/cpu
-if ! "$uv" pip install --python "$python" -e "${release}[mcp]" --index-url https://mirrors.aliyun.com/pypi/simple/; then
+if [ -d "$root/shared/wheels" ] && "$uv" pip install --python "$python" --no-index \
+    --find-links "$root/shared/wheels" -e "${release}[mcp]"; then
+  echo '已使用服务器本地依赖包完成安装'
+elif ! "$uv" pip install --python "$python" -e "${release}[mcp]" --index-url https://mirrors.aliyun.com/pypi/simple/; then
   echo '镜像安装失败，使用官方 PyPI 重试' >&2
   "$uv" pip install --python "$python" -e "${release}[mcp]" --index-url https://pypi.org/simple
 fi
