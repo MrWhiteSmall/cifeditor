@@ -12,6 +12,7 @@
 !packages/web/vendor/patinae-viewer-0.5.1-studio.1.tgz
 artifacts/
 .cache/
+**/.impeccable/review/
 .coverage
 .env
 packages/web/src/wasm/

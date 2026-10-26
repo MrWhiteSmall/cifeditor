@@ -223,6 +223,45 @@ class DocumentStore:
 
         self.call(session_id, remove)
 
+    def list_sessions(self) -> list[dict[str, Any]]:
+        """List owned metadata without loading structures or refreshing their TTL."""
+        sessions: dict[str, dict[str, Any]] = {}
+        with self._lock:
+            self._prune()
+            entries = [(sid, *entry, self._document_locks[sid]) for sid, entry in self._documents.items()]
+            if self._session_dir is not None:
+                for path in self._session_dir.glob("*.session"):
+                    if SESSION_ID_PATTERN.fullmatch(path.stem) is None:
+                        continue
+                    try:
+                        with path.open(encoding="utf-8") as source:
+                            metadata = json.loads(source.readline())
+                        if metadata.get("owner_id", "local") != current_owner():
+                            continue
+                        sessions[path.stem] = {
+                            "session_id": path.stem,
+                            "name": str(metadata.get("name", "structure")),
+                            "revision": int(metadata.get("revision", 0)),
+                            "last_accessed": path.stat().st_mtime,
+                        }
+                    except (OSError, ValueError, TypeError, AttributeError):
+                        LOGGER.warning("Skipping unreadable session metadata: %s", path.stem)
+        # Keep the same document -> store lock order used by call()/delete().
+        for sid, used, owner, document, document_lock in entries:
+            if owner != current_owner():
+                continue
+            with document_lock:
+                with self._lock:
+                    if self._documents.get(sid, (None, None, None))[2] is not document:
+                        continue
+                sessions[sid] = {
+                    "session_id": sid,
+                    "name": document.name,
+                    "revision": document.revision,
+                    "last_accessed": time.time() - (time.monotonic() - used),
+                }
+        return sorted(sessions.values(), key=lambda item: item["last_accessed"], reverse=True)
+
 
 session_dir_value = os.environ.get("ANNOTATION_STUDIO_SESSION_DIR")
 providers = load_providers()
@@ -595,6 +634,30 @@ def health() -> dict[str, str]:
 @app.get("/api/ready")
 def ready() -> dict[str, str]:
     return {"status": "ready"}
+
+
+@app.get("/api/mcp")
+async def mcp_management() -> dict[str, Any]:
+    """Describe the installed adapter using the SDK's actual tool definitions."""
+    try:
+        from cifeditor_mcp.server import create_server
+    except ModuleNotFoundError as error:
+        if error.name not in {"cifeditor_mcp", "mcp", "httpx"}:
+            raise
+        return {"available": False, "transport": "stdio", "tools": [], "install_extra": "mcp"}
+    server = create_server()
+    return {
+        "available": True,
+        "name": server.name,
+        "transport": "stdio",
+        "instructions": server.instructions,
+        "tools": [tool.model_dump(mode="json", exclude_none=True) for tool in await server.list_tools()],
+    }
+
+
+@app.get("/api/sessions")
+def list_sessions() -> dict[str, Any]:
+    return {"sessions": store.list_sessions(), "ttl_seconds": SESSION_TTL_SECONDS, "capacity": MAX_SESSIONS}
 
 
 @app.get("/api/schema")

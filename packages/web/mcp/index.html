@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#202124" />
+    <link rel="icon" href="/annotation-studio.svg" type="image/svg+xml" />
+    <title>MCP · CIF Editor</title>
+  </head>
+  <body class="mcp-page">
+    <header class="mcp-header">
+      <a class="mcp-brand" href="/" id="editor-home"><img src="/annotation-studio.svg" alt="" width="26" height="26" />CIF Editor</a>
+      <span class="mcp-header-divider">/</span><span data-i18n="MCP management">MCP management</span>
+      <div class="mcp-preferences">
+        <label><span class="sr-only" data-i18n="Language">Language</span><select id="ui-language"><option value="zh-CN">简体中文</option><option value="en">English</option></select></label>
+        <label><span class="sr-only" data-i18n="Appearance">Appearance</span><select id="ui-appearance"><option value="dark" data-i18n="Dark">Dark</option><option value="light" data-i18n="Light">Light</option><option value="system" data-i18n="System">System</option></select></label>
+        <label><span class="sr-only" data-i18n="Accent color">Accent color</span><select id="ui-accent"><option value="blue" data-i18n="Blue">Blue</option><option value="teal" data-i18n="Teal">Teal</option><option value="violet" data-i18n="Violet">Violet</option></select></label>
+      </div>
+    </header>
+    <main class="mcp-main">
+      <div class="mcp-heading"><div><h1 data-i18n="MCP management">MCP management</h1><p data-i18n="Connect your Agent to the same structure you edit in the browser.">Connect your Agent to the same structure you edit in the browser.</p></div><button id="refresh" data-i18n="Refresh status">Refresh status</button></div>
+      <section class="mcp-service" aria-label="Service status" data-i18n-aria-label="Service status">
+        <div><span class="mcp-status" id="api-status" role="status" data-i18n="Checking service…">Checking service…</span><code id="api-origin"></code></div>
+        <dl><div><dt data-i18n="Adapter">Adapter</dt><dd id="adapter-status">—</dd></div><div><dt data-i18n="Transport">Transport</dt><dd>stdio</dd></div><div><dt data-i18n="Session storage">Session storage</dt><dd id="storage-status">—</dd></div><div><dt data-i18n="Build">Build</dt><dd id="build-status">—</dd></div></dl>
+      </section>
+      <p class="mcp-error" id="service-error" role="alert" hidden></p>
+      <div class="mcp-nav-row"><nav class="mcp-nav" aria-label="MCP sections" data-i18n-aria-label="MCP sections"><a href="#tools" data-section="tools" aria-current="page"><span data-i18n="Tools">Tools</span><span id="tools-count">—</span></a><a href="#sessions" data-section="sessions"><span data-i18n="Shared sessions">Shared sessions</span><span id="sessions-count">—</span></a><a href="#connection" data-section="connection" data-i18n="Connection setup">Connection setup</a></nav><span id="last-updated" role="status" data-i18n="Loading…">Loading…</span></div>
+      <section id="section-tools" aria-label="Tools" data-i18n-aria-label="Tools">
+        <div class="mcp-tools-layout">
+          <div class="mcp-tool-index"><label for="tool-search" data-i18n="Find a tool">Find a tool</label><input id="tool-search" type="search" placeholder="Search name or purpose…" data-i18n-placeholder="Search name or purpose…" /><label for="tool-filter" class="sr-only" data-i18n="Tool type">Tool type</label><select id="tool-filter"><option value="all" data-i18n="All tools">All tools</option><option value="read" data-i18n="Read only">Read only</option><option value="write" data-i18n="Creates or edits documents">Creates or edits documents</option></select><div id="tool-list" aria-live="polite"><p class="mcp-placeholder" data-i18n="Loading tools…">Loading tools…</p></div></div>
+          <article class="mcp-tool-detail" id="tool-detail" aria-live="polite"><p class="mcp-placeholder" data-i18n="Select a tool to inspect its parameters.">Select a tool to inspect its parameters.</p></article>
+        </div>
+      </section>
+      <section id="section-sessions" hidden aria-labelledby="sessions-heading">
+        <div class="mcp-section-heading"><div><h2 id="sessions-heading" data-i18n="Shared sessions">Shared sessions</h2><p data-i18n="Open a document, then give its session ID to your Agent.">Open a document, then give its session ID to your Agent.</p></div><a class="mcp-action" href="/" id="new-document" data-i18n="Open structure">Open structure</a></div>
+        <p id="session-policy" class="mcp-note"></p><p id="sessions-error" class="mcp-error" role="alert" hidden></p><div id="session-list"><p class="mcp-placeholder" data-i18n="Loading sessions…">Loading sessions…</p></div>
+      </section>
+      <section id="section-connection" hidden aria-labelledby="connection-heading">
+        <div class="mcp-section-heading"><div><h2 id="connection-heading" data-i18n="Connection setup">Connection setup</h2><p data-i18n="A client starts the stdio adapter. The adapter connects to the editor API.">A client starts the stdio adapter. The adapter connects to the editor API.</p></div></div>
+        <div class="mcp-connection-layout"><form id="connection-form">
+          <label for="connection-mode" data-i18n="Run adapter">Run adapter</label><select id="connection-mode"><option value="local" data-i18n="On the Agent's computer">On the Agent's computer</option><option value="ssh" data-i18n="On a server via SSH">On a server via SSH</option></select>
+          <label for="connection-url" data-i18n="Editor base URL">Editor base URL</label><input id="connection-url" type="url" required spellcheck="false" />
+          <label for="connection-executable" data-i18n="Adapter executable">Adapter executable</label><input id="connection-executable" required spellcheck="false" value="atomworks-studio-mcp" /><p class="mcp-note" data-i18n="Use the full executable path if it is not on the client's PATH.">Use the full executable path if it is not on the client's PATH.</p>
+          <div id="ssh-fields" hidden><label for="connection-host" data-i18n="SSH host or alias">SSH host or alias</label><input id="connection-host" value="shenji" spellcheck="false" /><p class="mcp-note" data-i18n="The executable and editor URL must be reachable from the SSH server.">The executable and editor URL must be reachable from the SSH server.</p></div>
+        </form><div class="mcp-config"><div class="mcp-section-heading"><h3 data-i18n="Client JSON configuration">Client JSON configuration</h3><button id="copy-config" data-i18n="Copy configuration">Copy configuration</button></div><p id="config-error" class="mcp-error" role="alert" hidden></p><label class="sr-only" for="connection-json" data-i18n="Client JSON configuration">Client JSON configuration</label><textarea id="connection-json" readonly spellcheck="false" rows="15"></textarea><p class="mcp-note" data-i18n="Paste this into a client that accepts mcpServers JSON. Other clients may use a different format.">Paste this into a client that accepts mcpServers JSON. Other clients may use a different format.</p></div></div>
+        <div class="mcp-protocol-note"><h3 data-i18n="About this connection">About this connection</h3><p data-i18n="/mcp is this management page. This version uses stdio; do not enter this page URL as an HTTP MCP endpoint.">/mcp is this management page. This version uses stdio; do not enter this page URL as an HTTP MCP endpoint.</p><p data-i18n="The page shows API health and installed tools. Agent processes and their live connections are not tracked.">The page shows API health and installed tools. Agent processes and their live connections are not tracked.</p><a href="/docs" target="_blank" rel="noopener" data-i18n="Open API documentation">Open API documentation</a></div>
+      </section>
+      <footer class="mcp-footer"><span data-i18n="Shared documents · Revision-checked edits · Undo">Shared documents · Revision-checked edits · Undo</span><span id="copy-status" role="status"></span></footer>
+    </main>
+    <script type="module" src="/src/mcp/main.ts"></script>
+  </body>
+</html>

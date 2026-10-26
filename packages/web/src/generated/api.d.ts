@@ -98,6 +98,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mcp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * V1 Mcp Management
+         * @description Describe the installed adapter using the SDK's actual tool definitions.
+         */
+        get: operations["v1_mcp_management_api_v1_mcp_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ready": {
         parameters: {
             query?: never;
@@ -139,7 +159,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** V1 List Sessions */
+        get: operations["v1_list_sessions_api_v1_sessions_get"];
         put?: never;
         /** V1 Create Session */
         post: operations["v1_create_session_api_v1_sessions_post"];
@@ -1211,6 +1232,28 @@ export interface operations {
             };
         };
     };
+    v1_mcp_management_api_v1_mcp_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     v1_ready_api_v1_ready_get: {
         parameters: {
             query?: never;
@@ -1234,6 +1277,28 @@ export interface operations {
         };
     };
     v1_schema_api_v1_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    v1_list_sessions_api_v1_sessions_get: {
         parameters: {
             query?: never;
             header?: never;

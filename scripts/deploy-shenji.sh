@@ -2,13 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 test -f packages/web/dist/index.html || { echo '请先构建 packages/web/dist' >&2; exit 1; }
+test -f packages/web/dist/mcp/index.html || { echo '构建缺少 /mcp 管理页，请重新构建' >&2; exit 1; }
 test -z "$(git status --porcelain)" || { echo '请先提交源码与部署配置' >&2; exit 1; }
 revision=$(git rev-parse HEAD)
 release="/mnt/slurm-data/lusj/cifeditor/releases/${revision}"
 ssh shenji "mkdir -p '${release}' /mnt/slurm-data/lusj/cifeditor/shared/{sessions,uv-cache}"
 rsync -az --exclude=.git --exclude=.cache --exclude=node_modules --exclude=target \
   --exclude=.venv --exclude=artifacts --exclude=__pycache__ --exclude=.pytest_cache \
-  --exclude=.ruff_cache --exclude=external ./ "shenji:${release}/"
+  --exclude=.ruff_cache --exclude=external --exclude=.impeccable ./ "shenji:${release}/"
 ssh shenji bash -s -- "$revision" <<'REMOTE'
 set -euo pipefail
 root=/mnt/slurm-data/lusj/cifeditor

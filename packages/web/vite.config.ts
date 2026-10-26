@@ -58,5 +58,8 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
+    rolldownOptions: {
+      input: { editor: resolve("index.html"), mcp: resolve("mcp/index.html") },
+    },
   },
 });
