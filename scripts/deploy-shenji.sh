@@ -21,7 +21,7 @@ if [ ! -x "$python" ]; then
 fi
 # CPU-only wheels avoid downloading CUDA libraries on this editor-only service.
 "$uv" pip install --python "$python" 'torch==2.7.1+cpu' --no-deps --index-url https://download.pytorch.org/whl/cpu
-"$uv" pip install --python "$python" -e "$release" --index-url https://mirrors.aliyun.com/pypi/simple/
+"$uv" pip install --python "$python" -e "${release}[mcp]" --index-url https://mirrors.aliyun.com/pypi/simple/
 "$uv" pip check --python "$python"
 "$python" -c 'from annotation_studio.main import app; print(app.title)'
 printf 'ANNOTATION_STUDIO_REVISION=%s\n' "$1" > "$root/shared/release.env"

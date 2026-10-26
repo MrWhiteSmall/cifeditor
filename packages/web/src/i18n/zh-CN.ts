@@ -1,5 +1,18 @@
 /** UI copy only: CIF fields, queries, residue codes and model values stay canonical. */
 export const zhCN: Record<string, string> = {
+  "Give this session ID to your Agent to edit the same document.": "将此会话 ID 交给 Agent，即可编辑同一份文档。",
+  "Session ID": "会话 ID",
+  "Open a structure first": "请先打开结构",
+  "Copy session ID": "复制会话 ID",
+  "Open shared document": "打开共享文档",
+  "Automatically sync external edits": "自动同步外部修改",
+  "Pause sync while preparing drafts. Sync refreshes the view and clears temporary selections.": "填写未应用的草稿时可暂停同步。同步会刷新视图，并清除临时选择。",
+  "Session ID copied. Give it to your Agent to edit this document.": "会话 ID 已复制。交给 Agent 即可编辑本文档。",
+  "Press Ctrl/Cmd+C to copy the selected session ID.": "请按 Ctrl/Cmd+C 复制已选中的会话 ID。",
+  "Connected. External edits sync automatically.": "已连接，外部修改会自动同步。",
+  "Connection interrupted. Sync will retry automatically.": "连接中断，将自动重试同步。",
+  "External edits synced. Temporary atom selections were cleared.": "已同步外部修改，并清除临时原子选择。",
+  "The document changed in another client. Refreshed it; select atoms again before retrying.": "文档已被其他客户端修改。已刷新，请重新选择原子后再操作。",
   "No structure open": "尚未打开结构",
   "Open structure": "打开结构",
   "Open structure…": "打开结构…",

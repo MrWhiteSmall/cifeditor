@@ -2,7 +2,7 @@ import { t } from "./i18n/index.ts";
 import { unpositionedAtomIndices } from "./viewers/unpositioned-atoms";
 import { TrajectoryController } from "./studio/trajectory-controller";
 import initCifCore, { inspect_cif } from "./wasm/annotation_studio_core.js";
-import { api, apiText } from "./api";
+import { api, ApiError } from "./api";
 import { applyCapabilities, element, escapeHtml } from "./dom";
 import { SelectionController } from "./selection-controller";
 import { AnalysisController } from "./studio/analysis-controller";
@@ -29,6 +29,7 @@ import type {
 import { MolecularViewer, type AtomPick } from "./viewers";
 import "./style.css";
 import { initializePreferences } from "./preferences";
+import { SharedSessionSync } from "./studio/shared-session";
 
 const combineInput = element<HTMLInputElement>("combine-input");
 const selectionCount = element<HTMLSpanElement>("selection-count");
@@ -119,6 +120,14 @@ const selectionController = new SelectionController(
 
 function persistSession(response: SessionResponse, message?: string): void {
   persistSessionStorage(response, message);
+  const url = new URL(location.href);
+  url.searchParams.set("session", response.session_id);
+  url.searchParams.delete("example");
+  history.replaceState(null, "", url);
+  element<HTMLInputElement>("agent-session-id").value = response.session_id;
+  element<HTMLButtonElement>("copy-agent-session").disabled = false;
+  element<HTMLAnchorElement>("agent-session-link").href = url.href;
+  element("agent-session-link").hidden = false;
 }
 
 function log(message: string, level: "info" | "error" = "info"): void {
@@ -271,9 +280,18 @@ async function recoverRenderer(error: unknown): Promise<void> {
   log(t("Patinae rendering stopped. Switched to Mol*; your document and Undo history are preserved."));
 }
 
-async function refreshFromServer(summary?: StructureSummary, preserveSelection = true): Promise<void> {
+async function refreshFromServer(expectedSummary?: StructureSummary, preserveSelection = true): Promise<void> {
   if (!sessionId) return;
-  const cif = await apiText(`/api/sessions/${sessionId}/cif`);
+  const targetSession = sessionId;
+  const expectedRevision = expectedSummary?.revision ?? lastSummary?.revision;
+  const snapshot = await api<SessionResponse & { cif: string }>(`/api/sessions/${targetSession}/snapshot`);
+  if (sessionId !== targetSession) return;
+  const { cif, structure: summary } = snapshot;
+  if (preserveSelection && expectedRevision !== undefined && summary.revision !== expectedRevision) {
+    // Another client may have reordered atoms between our edit response and this snapshot.
+    preserveSelection = false;
+    await molecularViewer.clearAllVisuals();
+  }
   const refresh = async () => {
     await loadViewerCif(cif, currentName);
     if (summary) renderSummary(summary);
@@ -330,11 +348,14 @@ function runVisualUpdate(operation: () => Promise<void>): Promise<void> {
 function mutate(path: string, body?: unknown, propagateError = false): Promise<void> {
   if (!sessionId) return Promise.resolve();
   const targetSession = sessionId;
+  // Capture the revision together with the user's selection, before waiting in the queue.
+  const expectedRevision = lastSummary?.revision;
   return runViewerUpdate(async () => {
     if (sessionId !== targetSession) return;
     try {
       const response = await mutateWithConfirmation<SessionResponse>(
         `/api/sessions/${targetSession}${path}`, body, () => sessionId === targetSession,
+        undefined, expectedRevision,
       );
       if (!response || sessionId !== targetSession) return;
       trajectoryController?.dispose();
@@ -359,6 +380,14 @@ function mutate(path: string, body?: unknown, propagateError = false): Promise<v
       notifyHost("changed");
     } catch (error) {
       if (sessionId === targetSession) {
+        if (error instanceof ApiError && error.status === 409
+          && (error.detail as { detail?: { code?: string } })?.detail?.code === "revision_conflict") {
+          await molecularViewer.clearAllVisuals();
+          await refreshFromServer(undefined, false);
+          log(t("The document changed in another client. Refreshed it; select atoms again before retrying."), "error");
+          if (propagateError) throw error;
+          return;
+        }
         const message = t("Error: {0}", [String(error)]);
         conditionController?.setFeedback(message);
         log(message, "error");
@@ -442,6 +471,7 @@ async function initialize(): Promise<void> {
   sessionFileController = new SessionFileController({
     runViewerUpdate,
     getSessionId: () => sessionId,
+    getRevision: () => lastSummary?.revision,
     onOpened: (response) => runViewerUpdate(async () => {
       const workspace = element("workspace");
       workspace.inert = true;
@@ -490,6 +520,19 @@ async function initialize(): Promise<void> {
   sequenceController.bind();
   structureEditController.bind();
   sessionFileController.bind();
+  element("copy-agent-session").addEventListener("click", () => {
+    const input = element<HTMLInputElement>("agent-session-id");
+    if (!sessionId) return;
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(sessionId).then(
+        () => log(t("Session ID copied. Give it to your Agent to edit this document.")),
+        () => { input.focus(); input.select(); log(t("Press Ctrl/Cmd+C to copy the selected session ID.")); },
+      );
+    } else {
+      input.focus(); input.select();
+      log(t("Press Ctrl/Cmd+C to copy the selected session ID."));
+    }
+  });
   await sessionFileController.initializeExamples();
   pickScope.addEventListener("change", () => {
     selectionController.setScope(pickScope.value as SelectionScope);
@@ -561,6 +604,26 @@ async function initialize(): Promise<void> {
     sessionStorage.removeItem(PENDING_EXAMPLE_KEY);
     await sessionFileController.loadPendingExample(pendingExample);
   }
+  const sync = new SharedSessionSync({
+    current: () => sessionId && lastSummary ? { sessionId, revision: lastSummary.revision } : null,
+    enabled: () => !document.hidden && !trajectoryController?.active
+      && element<HTMLInputElement>("agent-auto-sync").checked
+      && !document.activeElement?.matches("input:not([readonly]), textarea, select"),
+    revision: async id => (await api<{ revision: number }>(`/api/sessions/${id}/revision`)).revision,
+    refresh: id => runViewerUpdate(async () => {
+      if (sessionId !== id) return;
+      // External structural edits can reorder indices even when atom counts are equal.
+      await molecularViewer.clearAllVisuals();
+      await refreshFromServer(undefined, false);
+      log(t("External edits synced. Temporary atom selections were cleared."));
+    }),
+    status: state => { element("agent-sync-status").textContent = state === "synced"
+      ? t("Connected. External edits sync automatically.")
+      : t("Connection interrupted. Sync will retry automatically."); },
+  });
+  const syncTimer = window.setInterval(() => { void sync.check(); }, 2000);
+  window.addEventListener("pagehide", () => window.clearInterval(syncTimer), { once: true });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) void sync.check(); });
 }
 
 if (import.meta.env.PROD && window.parent === window && "serviceWorker" in navigator) {

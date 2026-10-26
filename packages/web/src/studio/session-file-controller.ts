@@ -10,6 +10,7 @@ import { PENDING_EXAMPLE_KEY } from "./persistence";
 
 export interface SessionFileControllerOptions {
   getSessionId: () => string | null;
+  getRevision: () => number | undefined;
   onOpened: (response: SessionResponse) => Promise<void>;
   onCombined: (response: SessionResponse, filename: string) => Promise<void>;
   log: (message: string, level?: "info" | "error") => void;
@@ -151,6 +152,7 @@ export class SessionFileController {
   }
 
   private async performOpen(file: File, generation: number, targetSession: string | null): Promise<boolean> {
+    const expectedRevision = this.options.getRevision();
     const isCurrent = () => generation === this.openGeneration
       && (targetSession === null || targetSession === this.options.getSessionId());
     if (!isCurrent()) return false;
@@ -176,7 +178,10 @@ export class SessionFileController {
       if (targetSession) {
         const combined = await api<SessionResponse>(`/api/sessions/${targetSession}/combine`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(expectedRevision === undefined ? {} : { "If-Match": `"${expectedRevision}"` }),
+          },
           body: JSON.stringify({ session_ids: [response.session_id] }),
         });
         if (!isCurrent()) return false;

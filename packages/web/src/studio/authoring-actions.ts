@@ -33,10 +33,14 @@ export async function mutateWithConfirmation<T>(
   body: unknown,
   isCurrent: () => boolean,
   confirm = confirmAction,
+  expectedRevision?: number,
 ): Promise<T | null> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (expectedRevision !== undefined) headers["If-Match"] = `"${expectedRevision}"`;
   const request = {
     method: "POST",
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   };
   try {
@@ -55,6 +59,7 @@ export async function mutateWithConfirmation<T>(
     ) || !isCurrent()) return null;
     return api<T>(path, {
       ...request,
+      headers: { ...headers, "If-Match": `"${detail.revision}"` },
       body: JSON.stringify({
         ...(body as Record<string, unknown>),
         allow_target_discard: true,

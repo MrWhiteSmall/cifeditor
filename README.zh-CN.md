@@ -3,7 +3,7 @@
 基于 [RosettaCommons/atomworks-studio](https://github.com/RosettaCommons/atomworks-studio) **v0.0.1** 的独立开发分支，用于复现 NVIDIA RFD4 Space 内的 CIF 编辑器，并加入 PDB 导入、中文和主题设置。无需 RFD4 模型权重或 GPU 推理服务。
 
 - 本仓库：`git@gitee.com:lushengjie/cifeditor.git`
-- 开发分支：`feat/pdb-i18n-themes`
+- 开发分支：`feat/mcp-shared-sessions`（基于 `feat/pdb-i18n-themes`）
 - 上游基线：`4b419ebd327405035c8cf6ccde7f333d0878888e`
 - 原始快照分支：`upstream-v0.0.1`。通过对应提交的 GitHub 源码归档导入，不包含上游完整 Git 历史。
 - Space 来源：`nvidia/rfd4-proteina-zerogpu`，提交 `7bc2ea4ce8d06dcda02941e30caa17829f3f26f2`。
@@ -23,7 +23,7 @@
 需要 Python 3.12、uv、Node（上游推荐 `.node-version` 中的 22.22.0）、pnpm 11.16.0、Rust（`rust-toolchain.toml`）和 wasm-pack。前端依赖包含仓库内已有的 Patinae 包，不需重新下载其源码。
 
 ```bash
-git clone --branch feat/pdb-i18n-themes git@gitee.com:lushengjie/cifeditor.git
+git clone --branch feat/mcp-shared-sessions git@gitee.com:lushengjie/cifeditor.git
 cd cifeditor
 uv sync --frozen
 pnpm install --frozen-lockfile
@@ -47,6 +47,18 @@ pnpm --dir packages/web exec tsc --noEmit
 
 PDB 回归覆盖原子身份/坐标、多模型转换、CIF 自定义字段原样保留、非法输入、版本化 API、标注、导出重读及撤销。浏览器检查覆盖 Mol* 渲染、主题和语言设置。
 
+## MCP 与 Agent 共用文档
+
+本分支新增官方 Python MCP SDK 的 stdio 服务，调用现有 `/api/v1` 接口；GUI 与 Agent 使用同一份服务端文档、校验规则和撤销栈。无需接入模型权重。自然语言由连接 MCP 的 Agent 理解，服务提供确定的结构编辑工具。
+
+安装方式：`uv sync --python 3.12 --frozen --extra mcp`。先运行编辑器，再用 `atomworks-studio-mcp --editor-url http://127.0.0.1:7864` 启动 MCP。详细配置、工具清单及验证步骤见 [MCP 使用说明](docs/mcp.zh-CN.md)。
+
+网页右上角 **Agent / MCP** 菜单提供会话 ID。将它交给 Agent，再说“检查当前文档，选择指定链和残基，设为热点并导出 CIF”。请使用结构摘要中的真实链名，PDB 导入后可能成为 `A_1` 等标识。
+
+网页每两秒检查版本，检测到外部修改后刷新文档并清除临时选择；在输入框中编辑、播放轨迹或页面隐藏时暂停检查。填写未应用的表单草稿时，可以在菜单中手动关闭自动同步。视角和未应用的草稿不参与多人协作同步。
+
+所有 MCP 修改都必须携带选择预览/会话查看返回的 `expected_revision`。版本冲突返回错误，不自动覆盖或重试；重新检查文档并选择后才能编辑。网页操作也发送版本条件，避免修改旧的原子索引。
+
 ## shenji 部署
 
 访问地址：<http://192.168.22.7:7864/?lang=zh-CN>（需要能访问该内网）。服务以 `lusj` 的 systemd 用户服务 `cifeditor.service` 运行，已配置开机启动和会话持久化。
@@ -60,7 +72,7 @@ PDB 回归覆盖原子身份/坐标、多模型转换、CIF 自定义字段原�
 
 当前只监听内网地址，不配置公网域名。部署脚本使用共享依赖环境；回退旧版本时应重新部署对应提交，以一并恢复其 Python 依赖。
 
-会话持久化沿用上游实现：服务重启后可恢复文档和已应用的标注，但撤销历史会清空。会话仍受上游过期/数量清理规则限制，重要结果请及时下载为 CIF。
+此分支使用上游已有的完整文档快照能力，保存版本号及最多 10 步撤销记录，服务重启后也可恢复。兼容原有 CIF 会话文件；旧文件此前未保存的撤销记录无法恢复。会话仍受 2 小时未使用过期、最多 64 个会话的清理规则限制，重要结果请及时下载为 CIF。
 
 ## 范围与许可
 

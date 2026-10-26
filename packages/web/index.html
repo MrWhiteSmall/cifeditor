@@ -46,6 +46,18 @@
             <input id="combine-input" type="file" accept=".pdb,.ent,.cif,.mmcif,chemical/x-mmcif,chemical/x-pdb" disabled />
           </label>
           <button id="download" aria-label="Download annotated CIF" disabled data-i18n-aria-label="Download annotated CIF" data-i18n="Save CIF">Save CIF</button>
+          <details class="load-options agent-menu">
+            <summary>Agent / MCP</summary>
+            <div class="load-options-popover">
+              <p data-i18n="Give this session ID to your Agent to edit the same document.">Give this session ID to your Agent to edit the same document.</p>
+              <label><span data-i18n="Session ID">Session ID</span><input id="agent-session-id" readonly data-i18n-placeholder="Open a structure first" placeholder="Open a structure first" /></label>
+              <button id="copy-agent-session" disabled data-i18n="Copy session ID">Copy session ID</button>
+              <a id="agent-session-link" hidden target="_blank" rel="noopener" data-i18n="Open shared document">Open shared document</a>
+              <label class="checkbox"><input id="agent-auto-sync" type="checkbox" checked /><span data-i18n="Automatically sync external edits">Automatically sync external edits</span></label>
+              <p id="agent-sync-status" class="muted" role="status" data-i18n="Open a structure first">Open a structure first</p>
+              <p class="muted" data-i18n="Pause sync while preparing drafts. Sync refreshes the view and clears temporary selections.">Pause sync while preparing drafts. Sync refreshes the view and clears temporary selections.</p>
+            </div>
+          </details>
           <details class="load-options preferences-menu">
             <summary data-i18n="Preferences">Preferences</summary>
             <div class="load-options-popover">

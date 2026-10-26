@@ -1454,6 +1454,7 @@ class StudioDocument:
 
     def summary(self) -> dict[str, Any]:
         chain_key = "chain_iid" if "chain_iid" in self.array.get_annotation_categories() else "chain_id"
+        chain_names, chain_starts = np.unique(self.array.get_annotation(chain_key), return_index=True)
         details = self.annotation_details()
         annotations = [
             {
@@ -1488,6 +1489,14 @@ class StudioDocument:
             "atom_count": len(self.array),
             "condition_editors": self.condition_editor_state(),
             "chain_ids": sorted(str(value) for value in np.unique(self.array.get_annotation(chain_key))),
+            "chain_identifiers": [
+                {
+                    "display_id": str(name),
+                    "chain_id": str(self.array.chain_id[start]),
+                    "query": f"{chain_key} == {str(name)!r}",
+                }
+                for name, start in zip(chain_names, chain_starts, strict=True)
+            ],
             "next_chain_id": self.next_chain_id(),
             "sequence": self.sequence_view(),
             "condition_counts": {entry["name"]: entry["count"] for entry in details},

@@ -98,7 +98,13 @@ def test_persistent_store_restores_mutations_after_restart(tmp_path: Path) -> No
     summary = restarted_process.call(session_id, lambda document: document.summary())
     assert summary["name"] == "persistent"
     assert summary["condition_counts"]["hotspot"] == 1
-    assert summary["undo_depth"] == 0
+    assert summary["undo_depth"] == 1
+    assert summary["revision"] == 1
+    assert restarted_process.call(session_id, lambda document: document.undo(), persist=True)
+    assert (
+        restarted_process.call(session_id, lambda document: document.summary())["condition_counts"].get("hotspot", 0)
+        == 0
+    )
     assert len(list(tmp_path.glob("*.session"))) == 1
 
 

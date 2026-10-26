@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mcp = ["mcp>=1.30,<2", "httpx>=0.28,<1"]
 gradio = ["gradio>=6.29,<7", "httpx>=0.28,<1"]
 # PyPI PyMOL/Qt for pip-only environments (CI). Do NOT install these into a conda
 # PyMOL environment -- packages/pymol-plugin/atomworks_studio_pymol/pymol_env.yaml already supplies
@@ -32,6 +33,7 @@ Source = "https://github.com/RosettaCommons/atomworks-studio"
 
 [project.scripts]
 atomworks-studio = "annotation_studio.cli:main"
+atomworks-studio-mcp = "cifeditor_mcp.server:main"
 atomworks-studio-pymol = "atomworks_studio_pymol.installation:main"
 
 [project.entry-points."atomworks_studio.annotations"]
@@ -46,6 +48,7 @@ exclude = ["packages/api/annotation_studio/web", "packages/api/annotation_studio
 [tool.hatch.build.targets.wheel]
 packages = [
     "src/atomworks_studio",
+    "packages/mcp/cifeditor_mcp",
     "packages/api/annotation_studio",
     "packages/editing/atomworks_studio_editing",
     "packages/pymol-plugin/atomworks_studio_pymol",
@@ -55,6 +58,7 @@ packages = [
 [tool.hatch.build.targets.sdist]
 include = [
     "src/atomworks_studio",
+    "packages/mcp/cifeditor_mcp",
     "packages/api/annotation_studio",
     "packages/editing/atomworks_studio_editing",
     "packages/pymol-plugin/atomworks_studio_pymol",

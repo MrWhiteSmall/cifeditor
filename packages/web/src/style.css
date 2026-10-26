@@ -495,6 +495,7 @@ input, textarea { caret-color: var(--accent); }
 * { scrollbar-color: var(--border-strong) var(--surface-recessed); }
 .preferences-menu summary { white-space: nowrap; }
 .preferences-menu .load-options-popover { width: 270px; }
+.agent-menu a { color: var(--accent); text-underline-offset: 3px; }
 .preferences-menu p { line-height: 1.6; margin-bottom: 0; }
 .representation-mode label:has(input:checked) { background: var(--accent-soft); color: var(--text); }
 .representation-mode label:has(input:focus-visible) { outline-color: var(--focus); }

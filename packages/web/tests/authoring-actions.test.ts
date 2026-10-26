@@ -100,3 +100,17 @@ test("stale confirmation fails instead of silently retrying against newer data",
   await assert.rejects(() => mutateWithConfirmation("/api/edit", {}, () => true, confirm), ApiError);
   assert.equal(calls, 2);
 });
+
+test("ordinary edits bind the captured GUI revision and never auto-retry a conflict", async () => {
+  let calls = 0;
+  globalThis.fetch = async (_input, init) => {
+    calls++;
+    assert.equal(new Headers(init?.headers).get("If-Match"), '"4"');
+    return Response.json({ detail: { code: "revision_conflict", revision: 5 } }, { status: 409 });
+  };
+  await assert.rejects(() => mutateWithConfirmation(
+    "/api/sessions/one/delete", { atom_indices: [1] }, () => true,
+    async () => { assert.fail("conflict cannot be confirmed away"); }, 4,
+  ), ApiError);
+  assert.equal(calls, 1);
+});

@@ -9,6 +9,7 @@ import re
 import secrets
 import time
 from collections.abc import Awaitable, Callable
+from contextvars import ContextVar
 from importlib.resources import files
 from io import StringIO
 from pathlib import Path
@@ -44,6 +45,7 @@ MAX_UPLOAD_BYTES = 32 * 1024 * 1024
 MAX_SESSIONS = 64
 SESSION_TTL_SECONDS = 2 * 60 * 60
 SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{20,64}$")
+EXPECTED_REVISION: ContextVar[int | None] = ContextVar("studio_expected_revision", default=None)
 IDENTITY_HEADER = os.environ.get("ANNOTATION_STUDIO_IDENTITY_HEADER")
 if IDENTITY_HEADER and os.environ.get("ANNOTATION_STUDIO_TRUST_PROXY_IDENTITY") != "1":
     raise RuntimeError(
@@ -121,13 +123,12 @@ class DocumentStore:
         path = self._session_file(session_id)
         if path is None:
             return
-        metadata = json.dumps(
-            {"name": document.name, "owner_id": current_owner()},
-            separators=(",", ":"),
-        )
+        state = document.export_state()
+        cif = state.pop("cif")
+        metadata = json.dumps({**state, "format": 2, "owner_id": current_owner()}, separators=(",", ":"))
         temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
         with temporary.open("w", encoding="utf-8") as output:
-            output.write(f"{metadata}\n{document.to_cif()}")
+            output.write(f"{metadata}\n{cif}")
             output.flush()
             os.fsync(output.fileno())
         temporary.chmod(0o600)
@@ -140,6 +141,15 @@ class DocumentStore:
         try:
             metadata_text, cif = path.read_text(encoding="utf-8").split("\n", 1)
             metadata = json.loads(metadata_text)
+            if metadata.get("format") == 2:
+                return (
+                    str(metadata.get("owner_id", "local")),
+                    StudioDocument.from_state(
+                        {**metadata, "cif": cif},
+                        condition_provider=self._condition_provider,
+                        validation_provider=self._validation_provider,
+                    ),
+                )
             return (
                 str(metadata.get("owner_id", "local")),
                 StudioDocument.from_cif(
@@ -243,6 +253,19 @@ async def security_headers(
         "/api/v1/ready",
     }
     rejection: Response | None = None
+    expected_revision = None
+    if (
+        protected_api
+        and request.method in {"POST", "PUT", "PATCH", "DELETE"}
+        and request.headers.get("If-Match") is not None
+    ):
+        match = re.fullmatch(r'"(\d{1,16})"', request.headers["If-Match"])
+        if match is None:
+            rejection = JSONResponse(
+                status_code=400, content={"detail": 'If-Match must be a quoted revision, e.g. "3"'}
+            )
+        else:
+            expected_revision = int(match[1])
     if IDENTITY_HEADER and protected_api:
         owner_id = request.headers.get(IDENTITY_HEADER, "").strip()
         if not owner_id:
@@ -250,6 +273,7 @@ async def security_headers(
         elif len(owner_id) > 256 or any(ord(character) < 32 for character in owner_id):
             rejection = JSONResponse(status_code=400, content={"detail": "invalid authenticated user identity"})
     owner_token = set_current_owner(owner_id)
+    revision_token = EXPECTED_REVISION.set(expected_revision)
     request_id = request.headers.get("X-Request-ID", "")
     if re.fullmatch(r"[A-Za-z0-9._-]{8,64}", request_id) is None:
         request_id = secrets.token_hex(12)
@@ -257,6 +281,7 @@ async def security_headers(
         response = rejection or await call_next(request)
     finally:
         reset_current_owner(owner_token)
+        EXPECTED_REVISION.reset(revision_token)
     response.headers["X-Request-ID"] = request_id
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
@@ -493,10 +518,21 @@ def _call[T](
     *,
     persist: bool = False,
 ) -> T:
+    def guarded(document: StudioDocument) -> T:
+        revision = EXPECTED_REVISION.get()
+        if persist and revision is not None and revision != document.revision:
+            raise DocumentRevisionConflictError(revision, document.revision)
+        return operation(document)
+
     try:
-        return store.call(session_id, operation, persist=persist)
+        return store.call(session_id, guarded, persist=persist)
     except SessionNotFoundError:
         raise HTTPException(status_code=404, detail="session not found or expired") from None
+    except DocumentRevisionConflictError as error:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "revision_conflict", "revision": error.revision, "message": str(error)},
+        ) from error
 
 
 def _apply(session_id: str, operation: Callable[[StudioDocument], Any]) -> dict:
@@ -515,11 +551,6 @@ def _apply(session_id: str, operation: Callable[[StudioDocument], Any]) -> dict:
                 "revision": error.revision,
                 "message": str(error),
             },
-        ) from error
-    except DocumentRevisionConflictError as error:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "revision_conflict", "revision": error.revision, "message": str(error)},
         ) from error
     except (ValueError, IndexError, KeyError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
@@ -650,6 +681,20 @@ def get_session(session_id: str) -> dict:
     return _session_response(session_id, _call(session_id, lambda document: document.summary()))
 
 
+@app.get("/api/sessions/{session_id}/revision")
+def get_revision(session_id: str) -> dict:
+    return {"revision": _call(session_id, lambda document: document.revision)}
+
+
+@app.get("/api/sessions/{session_id}/snapshot")
+def get_snapshot(session_id: str) -> dict:
+    """Return summary and CIF from the same locked revision."""
+    return _call(
+        session_id,
+        lambda document: {**_session_response(session_id, document.summary()), "cif": document.to_cif()},
+    )
+
+
 @app.delete("/api/sessions/{session_id}", status_code=204)
 def delete_session(session_id: str) -> Response:
     try:
@@ -735,17 +780,16 @@ def resolve_selection(session_id: str, selection: SelectionResolve) -> dict:
 @app.post("/api/sessions/{session_id}/selections/query")
 def query_selection(session_id: str, selection: SelectionQuery) -> dict:
     try:
-        indices = _call(
+        indices, revision = _call(
             session_id,
-            lambda document: document.query_indices(
-                selection.expression,
-                syntax=selection.syntax,
-                scope=selection.scope,
+            lambda document: (
+                document.query_indices(selection.expression, syntax=selection.syntax, scope=selection.scope),
+                document.revision,
             ),
         )
     except (IndexError, NameError, SyntaxError, TypeError, ValueError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    return {"atom_indices": indices.tolist(), "count": len(indices)}
+    return {"atom_indices": indices.tolist(), "count": len(indices), "revision": revision}
 
 
 @app.get("/api/sessions/{session_id}/cif", response_class=PlainTextResponse)
