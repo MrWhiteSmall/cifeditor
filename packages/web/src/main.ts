@@ -30,8 +30,6 @@ import { MolecularViewer, type AtomPick } from "./viewers";
 import "./style.css";
 import { initializePreferences } from "./preferences";
 
-initializePreferences(() => sessionId);
-
 const combineInput = element<HTMLInputElement>("combine-input");
 const selectionCount = element<HTMLSpanElement>("selection-count");
 const viewerBackend = element<HTMLSpanElement>("viewer-backend");
@@ -111,6 +109,9 @@ let conditionController: ConditionController | null = null;
 let sequenceController: SequenceController | null = null;
 let structureEditController: StructureEditController | null = null;
 let sessionFileController: SessionFileController | null = null;
+initializePreferences(() => sessionId, appearance => {
+  molecularViewer?.setBackground(appearance === "light" ? "white" : "black");
+});
 const selectionController = new SelectionController(
   () => molecularViewer,
   () => updateSelectionUi(),
@@ -394,6 +395,7 @@ async function initialize(): Promise<void> {
       }
     }).catch((failure) => log(t("Renderer recovery failed: {0}", [String(failure)]), "error")),
   );
+  molecularViewer.setBackground(document.documentElement.dataset.uiTheme === "light" ? "white" : "black");
   viewerToolbarController = new ViewerToolbarController({
     viewer: () => molecularViewer,
     selection: selectionController,

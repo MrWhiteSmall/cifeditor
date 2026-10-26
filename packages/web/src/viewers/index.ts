@@ -70,6 +70,7 @@ export class MolecularViewer {
   private interactionOverlays: ViewerInteraction[] = [];
   private measurementRequests: ViewerMeasurementRequest[] = [];
   private markers: ViewerMarker[] = [];
+  private background: "black" | "white" = "black";
   // Capture atom indices when a style is applied, not the later contents of "sele".
   private representations: {
     representation: ViewerRepresentation;
@@ -138,6 +139,7 @@ export class MolecularViewer {
       throw error;
     }
     this.adapter = adapter;
+    adapter.setBackground?.(this.background);
     this.container.dataset.backend = backend;
     const softwarePicking =
       backend === "patinae" && this.container.dataset.picking === "software-disabled";
@@ -246,8 +248,9 @@ export class MolecularViewer {
   }
 
   setBackground(color: "black" | "white"): void {
-    if (!this.adapter?.setBackground) throw new Error(t("Background controls are unavailable."));
-    this.adapter.setBackground(color);
+    this.background = color;
+    this.adapter?.setBackground?.(color);
+    this.container.dataset.background = color;
   }
 
   camera(action: ViewerCameraAction): void {

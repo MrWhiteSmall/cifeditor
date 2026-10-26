@@ -1,6 +1,6 @@
 import { t } from "../i18n/index.ts";
 import { postJson } from "../api";
-import { applyCapabilities, closeToolbarMenus, element } from "../dom";
+import { applyCapabilities, bindFloatingMenus, closeToolbarMenus, element } from "../dom";
 import type { SelectionController } from "../selection-controller";
 import type { SelectionSyntax, StructureSummary } from "../types";
 import type {
@@ -59,23 +59,15 @@ export class ViewerToolbarController {
   }
 
   bind(): void {
+    bindFloatingMenus();
     for (const menu of document.querySelectorAll<HTMLDetailsElement>(".viewer-menu")) {
       menu.addEventListener("toggle", () => {
         if (menu.open) {
-          closeToolbarMenus(menu);
           this.positionOpenMenu();
         }
       });
     }
     window.addEventListener("resize", () => this.positionOpenMenu());
-    document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape") return;
-      const openMenu = document.querySelector<HTMLDetailsElement>(".viewer-menu[open], .load-options[open]");
-      if (openMenu) {
-        openMenu.open = false;
-        openMenu.querySelector<HTMLElement>("summary")?.focus();
-      }
-    });
     for (const button of document.querySelectorAll<HTMLButtonElement>("[data-representation]")) {
       button.addEventListener("click", async () => {
         const action = (button.dataset.action ?? document.querySelector<HTMLInputElement>(

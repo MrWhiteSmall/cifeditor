@@ -1,0 +1,16 @@
+[Unit]
+Description=CIF Editor (AtomWorks Studio fork)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/slurm-data/lusj/cifeditor/current
+Environment=ANNOTATION_STUDIO_SESSION_DIR=/mnt/slurm-data/lusj/cifeditor/shared/sessions
+EnvironmentFile=/mnt/slurm-data/lusj/cifeditor/shared/release.env
+ExecStart=/mnt/slurm-data/lusj/cifeditor/shared/venv/bin/atomworks-studio --host 192.168.22.7 --port 7864
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=default.target

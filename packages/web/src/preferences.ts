@@ -31,7 +31,10 @@ export function languageReloadUrl(href: string, language: string, sessionId: str
   return url.href;
 }
 
-export function initializePreferences(getSessionId: () => string | null): void {
+export function initializePreferences(
+  getSessionId: () => string | null,
+  onAppearanceChange: (appearance: "dark" | "light") => void,
+): void {
   document.documentElement.lang = currentLanguage();
   translateStatic();
   const language = document.getElementById("ui-language") as HTMLSelectElement;
@@ -45,6 +48,7 @@ export function initializePreferences(getSessionId: () => string | null): void {
     const theme = resolvedAppearance(appearance.value as Appearance, media.matches);
     document.documentElement.dataset.uiTheme = theme;
     document.documentElement.dataset.accent = accent.value;
+    onAppearanceChange(theme);
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#f6f7f9" : "#202124");
   };
   appearance.addEventListener("change", () => { remember(APPEARANCE_KEY, appearance.value); apply(); });
