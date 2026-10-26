@@ -63,7 +63,7 @@ PDB 回归覆盖原子身份/坐标、多模型转换、CIF 自定义字段原�
 
 访问地址：<http://192.168.22.7:7864/?lang=zh-CN>（需要能访问该内网）。服务以 `lusj` 的 systemd 用户服务 `cifeditor.service` 运行，已配置开机启动和会话持久化。
 
-构建前端、提交修改后运行 `bash scripts/deploy-shenji.sh`。脚本通过现有 `ssh shenji` 配置同步源码及构建产物，使用 CPU 版 PyTorch 和阿里云 PyPI 镜像安装依赖，再启动独立服务。部署环境是 Python 3.12，无需 GPU 推理服务。
+构建前端、提交修改后运行 `bash scripts/deploy-shenji.sh`。脚本通过现有 `ssh shenji` 配置同步源码及构建产物，使用 CPU 版 PyTorch 和阿里云 PyPI 镜像安装依赖，镜像失败时改用官方 PyPI，再启动独立服务。部署环境是 Python 3.12，无需 GPU 推理服务。
 
 - 发布目录：`/mnt/slurm-data/lusj/cifeditor/releases/<commit>`，`current` 指向当前发布。
 - 会话目录：`/mnt/slurm-data/lusj/cifeditor/shared/sessions`；依赖环境、缓存也位于 `shared`。
