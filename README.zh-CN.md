@@ -49,13 +49,13 @@ PDB 回归覆盖原子身份/坐标、多模型转换、CIF 自定义字段原�
 
 ## MCP 与 Agent 共用文档
 
-本分支新增官方 Python MCP SDK 的 stdio 服务，调用现有 `/api/v1` 接口；GUI 与 Agent 使用同一份服务端文档、校验规则和撤销栈。无需接入模型权重。自然语言由连接 MCP 的 Agent 理解，服务提供确定的结构编辑工具。
+本分支使用官方 Python MCP SDK 提供 Streamable HTTP 服务，工具复用现有 `/api/v1` 接口；GUI 与 Agent 使用同一份服务端文档、校验规则和撤销栈。无需接入模型权重。自然语言由连接 MCP 的 Agent 理解，服务提供确定的结构编辑工具。
 
-安装方式：`uv sync --python 3.12 --frozen --extra mcp`。先运行编辑器，再用 `atomworks-studio-mcp --editor-url http://127.0.0.1:7864` 启动 MCP。详细配置、工具清单及验证步骤见 [MCP 使用说明](docs/mcp.zh-CN.md)。
+安装方式：`uv sync --python 3.12 --frozen --extra mcp`。运行编辑器后，Agent 可直接连接 `http://192.168.22.7:7864/mcp`（本机运行时替换为本机地址）。详细配置、工具清单及验证步骤见 [MCP 使用说明](docs/mcp.zh-CN.md)。
 
 网页右上角 **Agent / MCP** 菜单提供会话 ID。将它交给 Agent，再说“检查当前文档，选择指定链和残基，设为热点并导出 CIF”。请使用结构摘要中的真实链名，PDB 导入后可能成为 `A_1` 等标识。
 
-访问 `/mcp?lang=zh-CN` 可打开可视化管理页：查看实际工具与参数、共享会话、API 状态，复制本机或 SSH 客户端配置。此页面沿用中英文与主题设置；MCP 协议仍使用 stdio。
+访问 `/mcp_manage?lang=zh-CN` 可打开可视化管理页：查看实际工具与参数、共享会话、API 状态，复制 HTTP 客户端配置。此页面沿用中英文与主题设置；`/mcp` 专供 Agent 接入，不再提供 stdio。
 
 网页每两秒检查版本，检测到外部修改后刷新文档并清除临时选择；在输入框中编辑、播放轨迹或页面隐藏时暂停检查。填写未应用的表单草稿时，可以在菜单中手动关闭自动同步。视角和未应用的草稿不参与多人协作同步。
 

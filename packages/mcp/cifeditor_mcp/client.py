@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Mapping
 from urllib.parse import urlencode, urlsplit
 
 import httpx
@@ -11,7 +12,10 @@ from mcp.server.fastmcp.exceptions import ToolError
 
 
 class EditorClient:
-    def __init__(self, url: str, *, token: str | None = None, transport: httpx.AsyncBaseTransport | None = None):
+    def __init__(
+        self, url: str, *, token: str | None = None, transport: httpx.AsyncBaseTransport | None = None,
+        headers: Mapping[str, str] | None = None,
+    ):
         parsed = urlsplit(url)
         if (
             parsed.scheme not in {"http", "https"}
@@ -24,7 +28,7 @@ class EditorClient:
         self.url = url.rstrip("/")
         self.http = httpx.AsyncClient(
             base_url=self.url + "/api/v1/",
-            headers={"Authorization": f"Bearer {token}"} if token else {},
+            headers={**(headers or {}), **({"Authorization": f"Bearer {token}"} if token else {})},
             timeout=150,
             trust_env=False,
             follow_redirects=False,

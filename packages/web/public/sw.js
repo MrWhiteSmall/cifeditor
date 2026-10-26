@@ -17,7 +17,8 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (event.request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) {
+  if (event.request.method !== "GET" || url.origin !== self.location.origin
+      || url.pathname.startsWith("/api/") || /^\/mcp\/?$/.test(url.pathname)) {
     return;
   }
   event.respondWith(

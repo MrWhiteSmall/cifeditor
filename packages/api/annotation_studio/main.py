@@ -9,6 +9,7 @@ import re
 import secrets
 import time
 from collections.abc import Awaitable, Callable
+from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from importlib.resources import files
 from io import StringIO
@@ -26,6 +27,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
+from starlette.routing import Route
 
 from .contracts import (
     NEUTRAL_VALIDATION_PROVIDER,
@@ -273,7 +275,24 @@ store = DocumentStore(
     condition_provider=condition_provider,
     validation_provider=validation_provider,
 )
-app = FastAPI(title="AtomWorks Studio", version=__version__)
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    # A fresh SDK session manager is required on each application startup.
+    if getattr(application.state, "mcp_http", None) is not None:
+        from .mcp_http import create_http_application
+
+        server, transport = create_http_application(application, lambda: IDENTITY_HEADER)
+        application.state.mcp_server = server
+        application.state.mcp_http = transport
+        async with transport.router.lifespan_context(transport):
+            yield
+    else:
+        yield
+
+
+app = FastAPI(title="AtomWorks Studio", version=__version__, lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -283,14 +302,15 @@ async def security_headers(
 ) -> Response:
     started = time.monotonic()
     owner_id = "local"
-    protected_api = request.url.path.startswith("/api/") and request.url.path not in {
+    protocol_request = request.url.path.rstrip("/") == "/mcp"
+    protected_api = protocol_request or (request.url.path.startswith("/api/") and request.url.path not in {
         "/api/health",
         "/api/metrics",
         "/api/ready",
         "/api/v1/health",
         "/api/v1/metrics",
         "/api/v1/ready",
-    }
+    })
     rejection: Response | None = None
     expected_revision = None
     if (
@@ -324,7 +344,7 @@ async def security_headers(
     response.headers["X-Request-ID"] = request_id
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
-    if request.url.path.startswith("/api/"):
+    if protocol_request or request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
     elif request.url.path.startswith("/assets/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
@@ -644,12 +664,13 @@ async def mcp_management() -> dict[str, Any]:
     except ModuleNotFoundError as error:
         if error.name not in {"cifeditor_mcp", "mcp", "httpx"}:
             raise
-        return {"available": False, "transport": "stdio", "tools": [], "install_extra": "mcp"}
+        return {"available": False, "transport": "streamable-http", "tools": [], "install_extra": "mcp"}
     server = create_server()
     return {
         "available": True,
         "name": server.name,
-        "transport": "stdio",
+        "transport": "streamable-http",
+        "endpoint": "/mcp",
         "instructions": server.instructions,
         "tools": [tool.model_dump(mode="json", exclude_none=True) for tool in await server.list_tools()],
     }
@@ -1137,6 +1158,21 @@ for legacy_route in list(app.routes):
         name=f"v1_{legacy_route.name}",
         include_in_schema=include_versioned_in_schema,
     )
+
+
+try:
+    from .mcp_http import HTTPMCPEndpoint, create_http_application
+except ModuleNotFoundError as error:
+    if error.name not in {"mcp", "cifeditor_mcp", "httpx"}:
+        raise
+    app.state.mcp_http = None
+
+    @app.api_route("/mcp", methods=["GET", "POST", "DELETE"], include_in_schema=False)
+    def missing_mcp() -> Response:
+        return JSONResponse(status_code=503, content={"detail": "Install the mcp extra to enable HTTP MCP"})
+else:
+    app.state.mcp_server, app.state.mcp_http = create_http_application(app, lambda: IDENTITY_HEADER)
+    app.router.routes.append(Route("/mcp", endpoint=HTTPMCPEndpoint(app)))
 
 
 source_guide = Path(__file__).resolve().parents[3] / "docs/_build/html"

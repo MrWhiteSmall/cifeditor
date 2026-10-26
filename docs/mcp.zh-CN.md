@@ -1,16 +1,16 @@
 # CIF Editor MCP
 
-MCP 适配层位于 `packages/mcp/cifeditor_mcp`，通过 HTTP 调用现有编辑器，不建立第二份文档状态。官方 Python MCP SDK 版本由 `uv.lock` 锁定，运行时使用 stdio。
+MCP 工具位于 `packages/mcp/cifeditor_mcp`，HTTP 接入位于 `packages/api/annotation_studio/mcp_http.py`。官方 Python MCP SDK 版本由 `uv.lock` 锁定，仅提供 **Streamable HTTP**。工具复用同一应用内的编辑器 API，不建立第二份文档状态。
 
 ## 可视化管理
 
-打开编辑器同源的 `/mcp`（例如 `http://192.168.22.7:7864/mcp?lang=zh-CN`），也可以从编辑器 **Agent / MCP → MCP 管理** 进入。
+打开编辑器同源的 `/mcp_manage`（例如 `http://192.168.22.7:7864/mcp_manage?lang=zh-CN`），也可以从编辑器 **Agent / MCP → MCP 管理** 进入。
 
-管理页包含服务健康状态、实际注册的工具和输入 JSON Schema、当前身份可见的共享会话，以及本机/SSH 两种 stdio 客户端配置生成与复制。支持中文/英文、深浅色与主题色；每 15 秒刷新状态和会话，隐藏页面时暂停。
+管理页包含服务健康状态、实际注册的工具和输入 JSON Schema、当前身份可见的共享会话，以及 HTTP 客户端配置生成与复制。支持中文/英文、深浅色与主题色；每 15 秒刷新状态和会话，隐藏页面时暂停。
 
 `GET /api/v1/mcp` 从官方 SDK 读取工具定义；`GET /api/v1/sessions` 仅列出当前身份拥有的会话元数据，兼容重启后的持久化会话。列表不会加载完整结构、刷新会话有效期或暴露其他身份的文档。未启用身份代理时，沿用编辑器原有的单用户 `local` 模式。
 
-`/mcp` 是网页管理入口，**不是 HTTP MCP 协议端点**。状态显示编辑器 API 和适配器安装情况；当前不提供 Agent 进程管理、在线连接数量、调用历史或页面内工具执行。JSON 配置适用于采用 `mcpServers` 的客户端；其他客户端需按其配置格式转换。页面不会写入任何 Agent 客户端设置。
+`/mcp` 是 Agent 协议端点，`/mcp_manage` 是管理网页。状态显示编辑器 API 和适配器安装情况；当前不提供 Agent 进程管理、在线连接数量、调用历史或页面内工具执行。页面不会写入任何 Agent 客户端设置。
 
 ## 连接
 
@@ -18,43 +18,28 @@ MCP 适配层位于 `packages/mcp/cifeditor_mcp`，通过 HTTP 调用现有编�
 
 ```bash
 uv sync --python 3.12 --frozen --extra mcp
-# 终端一：编辑器
+# 一个服务同时提供编辑器、管理页与 HTTP MCP
 uv run --python 3.12 --frozen --extra mcp atomworks-studio --host 127.0.0.1 --port 7864
-# MCP 客户端会自动启动以下进程，通过 stdin/stdout 通信
-uv run --python 3.12 --frozen --extra mcp atomworks-studio-mcp --editor-url http://127.0.0.1:7864
 ```
 
-常见 MCP 客户端的 JSON 配置（将可执行文件路径替换为实际环境）：
+在 Agent 客户端选择 **Streamable HTTP**，填写 `http://192.168.22.7:7864/mcp`。客户端必须能够访问该内网地址。支持以下 `mcpServers` 格式的客户端可以使用：
 
 ```json
 {
   "mcpServers": {
     "cifeditor": {
-      "command": "/absolute/path/to/venv/bin/atomworks-studio-mcp",
-      "args": ["--editor-url", "http://192.168.22.7:7864"]
+      "type": "http",
+      "url": "http://192.168.22.7:7864/mcp"
     }
   }
 }
 ```
 
-也可以让 MCP 客户端通过 SSH 在 shenji 上启动 stdio 适配器，无需开放额外监听端口：
+不同客户端的配置格式可能不同，例如传输类型可能显示为 `http` 或 `streamable-http`；协议地址相同。无需本地 Python 进程或 SSH 启动命令，已移除原有 stdio CLI。直接用浏览器打开 `/mcp` 得到协议错误是正常的，应通过 MCP 客户端初始化。
 
-```json
-{
-  "mcpServers": {
-    "cifeditor": {
-      "command": "ssh",
-      "args": [
-        "-T", "shenji",
-        "/mnt/slurm-data/lusj/cifeditor/shared/venv/bin/atomworks-studio-mcp",
-        "--editor-url", "http://192.168.22.7:7864"
-      ]
-    }
-  }
-}
-```
+HTTP 传输是无状态模式，文档仍通过显式 `session_id` 共享。工具在当前请求的身份下调用应用内 API，不访问由 Agent 指定的任意主机，也不会把某个用户的身份缓存给另一个用户。启用受信任代理身份时，代理需对 `/mcp` 和 `/api/` 同时鉴权并注入身份；不要让客户端自行提供受信任身份头。未启用时沿用编辑器原有的单用户 `local` 模式。
 
-`CIFEDITOR_URL` 可替代命令行地址；默认值为 `http://127.0.0.1:7864`。如果现有反向代理需要 Bearer Token，可通过进程环境 `CIFEDITOR_API_TOKEN` 提供。它不替代后端的鉴权配置，不要把代理信任的身份头交给工具参数。编辑器地址由启动配置固定，Agent 工具不能修改请求目标。此版本没有新增公开 HTTP MCP 服务。
+SDK 的 Host/Origin 检查保持开启。默认允许本机访问；部署其他地址时设置 `CIFEDITOR_MCP_ALLOWED_HOSTS`，以逗号分隔，例如 `192.168.22.7:7864,editor.example.com`。shenji 服务已配置其内网地址。代理必须保留或规范化 Host，允许的 Origin 使用这些主机的 HTTP(S) 地址。不新增任意跨域浏览器访问。
 
 ## 使用同一个文档
 
@@ -100,8 +85,8 @@ MCP 提供当前工具清单中的编辑能力；这不等于修改任意 CIF �
 
 ```bash
 uv run --python 3.12 --frozen --extra mcp --with pytest --with httpx pytest -q \
-  tests/test_mcp.py tests/test_shared_sessions.py tests/test_api.py
+  tests/test_mcp_http.py tests/test_mcp.py tests/test_shared_sessions.py tests/test_api.py
 node --test packages/web/tests/*.test.ts
 ```
 
-协议测试通过官方 SDK 的内存传输执行真实工具发现和调用，并另外启动 stdio 子进程验证初始化。覆盖导入、选择、标注、导出重读、撤销、GUI/Agent 冲突、非法会话与参数。后端测试覆盖并发只提交一次、快照一致性、重启保留版本和撤销、旧存储兼容；前端测试覆盖会话切换后的过期响应、暂停、重叠检查和网络恢复。
+协议测试通过官方 SDK 的 Streamable HTTP 客户端验证初始化、工具发现、导入、选择、标注、导出、撤销、GUI/Agent 版本冲突和不同身份隔离；同时校验 Host/Origin 与请求大小限制。保留工具层内存协议测试。后端测试覆盖并发只提交一次、快照一致性、重启保留版本和撤销、旧存储兼容；前端测试覆盖会话同步、HTTP 配置和协议请求绕过 Service Worker 缓存。

@@ -2,20 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { connectionConfig, filterTools, type McpTool } from "../src/mcp/model.ts";
 
-test("client configuration preserves spaces and quotes the SSH remote command", () => {
-  assert.deepEqual(connectionConfig({ mode: "local", url: "http://localhost:7864/", executable: "/some path/mcp", host: "" }), {
-    mcpServers: { cifeditor: { command: "/some path/mcp", args: ["--editor-url", "http://localhost:7864"] } },
+test("client configuration connects directly to the HTTP MCP endpoint", () => {
+  assert.deepEqual(connectionConfig("http://localhost:7864/mcp"), {
+    mcpServers: { cifeditor: { type: "http", url: "http://localhost:7864/mcp" } },
   });
-  const remote = connectionConfig({ mode: "ssh", url: "http://localhost:7864/", executable: "/some path/it's-mcp", host: "user@shenji" });
-  assert.deepEqual(remote, { mcpServers: { cifeditor: { command: "ssh", args: ["-T", "user@shenji", "'/some path/it'\\''s-mcp' --editor-url 'http://localhost:7864'"] } } });
 });
 
-test("configuration rejects credentials and SSH options supplied as hostnames", () => {
+test("configuration rejects non-HTTP URLs and embedded credentials", () => {
   for (const url of ["file:///tmp/a", "http://user:password@host", "http://host?token=secret", "http://host/#token", "invalid"]) {
-    assert.throws(() => connectionConfig({ mode: "local", url, executable: "mcp", host: "" }));
-  }
-  for (const host of ["-oProxyCommand=touch /tmp/a", "host;echo yes", "host\nwhoami"]) {
-    assert.throws(() => connectionConfig({ mode: "ssh", url: "http://localhost", executable: "mcp", host }));
+    assert.throws(() => connectionConfig(url));
   }
 });
 

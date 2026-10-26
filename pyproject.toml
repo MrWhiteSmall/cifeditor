@@ -33,7 +33,6 @@ Source = "https://github.com/RosettaCommons/atomworks-studio"
 
 [project.scripts]
 atomworks-studio = "annotation_studio.cli:main"
-atomworks-studio-mcp = "cifeditor_mcp.server:main"
 atomworks-studio-pymol = "atomworks_studio_pymol.installation:main"
 
 [project.entry-points."atomworks_studio.annotations"]

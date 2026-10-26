@@ -8,11 +8,11 @@ web
 
 ## Product Purpose
 
-基于 AtomWorks Studio 开源源码二次开发，编辑 PDB/CIF 结构，并允许 Agent 通过 MCP 编辑网页中的同一份文档。用户明确要求中英文、可切换主题、shenji 部署与 `/mcp` 可视化管理入口。
+基于 AtomWorks Studio 开源源码二次开发，编辑 PDB/CIF 结构，并允许 Agent 通过 MCP 编辑网页中的同一份文档。用户明确要求中英文、可切换主题、shenji 部署；管理页使用 `/mcp_manage`，`/mcp` 专供其他 Agent 接入。
 
 ## Operating Context
 
-现有应用使用 FastAPI、原生 TypeScript 和 Vite。MCP 使用官方 Python SDK 的 stdio 传输，通过编辑器 HTTP API 共享会话与版本。
+现有应用使用 FastAPI、原生 TypeScript 和 Vite。按用户要求，MCP 仅提供官方 Python SDK 的 Streamable HTTP 传输，移除 stdio；工具复用编辑器 API 共享会话与版本。
 
 ## Capabilities and Constraints
 

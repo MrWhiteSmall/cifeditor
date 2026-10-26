@@ -219,11 +219,8 @@ function renderSessions(data: Sessions): void {
 }
 
 function renderConfig(): void {
-  const ssh = $<HTMLSelectElement>("connection-mode").value === "ssh";
-  $("ssh-fields").hidden = !ssh;
   try {
-    const config = connectionConfig({ mode: ssh ? "ssh" : "local", url: $<HTMLInputElement>("connection-url").value,
-      executable: $<HTMLInputElement>("connection-executable").value, host: $<HTMLInputElement>("connection-host").value });
+    const config = connectionConfig($<HTMLInputElement>("connection-url").value);
     $<HTMLTextAreaElement>("connection-json").value = JSON.stringify(config, null, 2);
     $<HTMLButtonElement>("copy-config").disabled = false;
     showError("config-error", "");
@@ -286,19 +283,12 @@ initializePreferences(() => null, () => {});
 $("api-origin").textContent = location.origin;
 $<HTMLAnchorElement>("editor-home").href = editorUrl();
 $<HTMLAnchorElement>("new-document").href = editorUrl();
-$<HTMLInputElement>("connection-url").value = location.origin;
+$<HTMLInputElement>("connection-url").value = new URL("/mcp", location.origin).href;
 $("tool-search").addEventListener("input", renderTools);
 $("tool-filter").addEventListener("change", renderTools);
 $("refresh").addEventListener("click", () => void refresh(true));
 $("connection-form").addEventListener("submit", event => event.preventDefault());
 $("connection-form").addEventListener("input", renderConfig);
-$("connection-mode").addEventListener("change", () => {
-  const executable = $<HTMLInputElement>("connection-executable");
-  const remote = "/mnt/slurm-data/lusj/cifeditor/shared/venv/bin/atomworks-studio-mcp";
-  if ($<HTMLSelectElement>("connection-mode").value === "ssh" && executable.value === "atomworks-studio-mcp") executable.value = remote;
-  else if (executable.value === remote) executable.value = "atomworks-studio-mcp";
-  renderConfig();
-});
 $("copy-config").addEventListener("click", () => void copy($<HTMLTextAreaElement>("connection-json").value));
 window.addEventListener("hashchange", showSection);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) void refresh(); });

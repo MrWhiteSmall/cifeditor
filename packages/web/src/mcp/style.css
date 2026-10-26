@@ -71,7 +71,7 @@ html:has(.mcp-page), body.mcp-page { height: auto; min-height: 100%; overflow: a
 .mcp-session-id { display: block; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 .mcp-session-actions { display: flex; gap: 12px; align-items: center; white-space: nowrap; }
 .mcp-connection-layout { display: grid; grid-template-columns: minmax(240px, 32%) minmax(0, 1fr); gap: 36px; padding: 0 0 24px; }
-.mcp-connection-layout form > input, .mcp-connection-layout form select, #connection-host { width: 100%; }
+.mcp-connection-layout form > input { width: 100%; }
 .mcp-config { min-width: 0; }
 .mcp-config > .mcp-section-heading { margin-top: 8px; }
 .mcp-config h3 { margin: 0; font-size: 13px; font-weight: 600; }

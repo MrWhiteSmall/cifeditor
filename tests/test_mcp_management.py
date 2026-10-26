@@ -30,7 +30,8 @@ def test_catalog_matches_official_sdk(management):
     response = client.get("/api/v1/mcp")
     assert response.status_code == 200
     catalog = response.json()
-    assert catalog["available"] and catalog["transport"] == "stdio"
+    assert catalog["available"] and catalog["transport"] == "streamable-http"
+    assert catalog["endpoint"] == "/mcp"
     expected = anyio.run(create_server().list_tools)
     assert catalog["tools"] == [tool.model_dump(mode="json", exclude_none=True) for tool in expected]
     assert next(tool for tool in catalog["tools"] if tool["name"] == "set_charge")["inputSchema"]["required"]
@@ -49,7 +50,7 @@ def test_missing_optional_sdk_does_not_break_management(management, monkeypatch)
     monkeypatch.setattr(builtins, "__import__", without_adapter)
     response = client.get("/api/v1/mcp")
     assert response.status_code == 200
-    assert response.json() == {"available": False, "transport": "stdio", "tools": [], "install_extra": "mcp"}
+    assert response.json() == {"available": False, "transport": "streamable-http", "tools": [], "install_extra": "mcp"}
 
 
 def test_listing_survives_restart_without_loading_or_touching_documents(management, monkeypatch):

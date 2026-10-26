@@ -1,13 +1,13 @@
 # MCP extension system check
 
-Scope: ordinary `/mcp` management extension of the incumbent editor. The existing visual system remains authoritative; this check does not establish a new identity or design system.
+Scope: ordinary `/mcp_manage` management extension of the incumbent editor. The existing visual system remains authoritative; this check does not establish a new identity or design system. The connection form now configures only Streamable HTTP at `/mcp`, following the user's explicit transport choice.
 
 ## Evidence checked
 
 - Product and surface intent: `PRODUCT.md` and `.impeccable/mcp-brief.md`.
 - Incumbent tokens and controls: `src/style.css`, including system/mono fonts, 13px base type, 4px controls, shared focus treatment, semantic surfaces, dark/light appearance, and blue/teal/violet accents.
 - Shared preference behavior: `src/preferences.ts`; static and dynamic translations: `src/i18n/index.ts`, `src/i18n/zh-CN.ts`, and their use in `src/mcp/main.ts`.
-- Extension composition and states: `mcp/index.html` and `src/mcp/style.css`; entry-point stylesheet imports and preference initialization in `src/mcp/main.ts`.
+- Extension composition and states: `mcp_manage/index.html` and `src/mcp/style.css`; entry-point stylesheet imports and preference initialization in `src/mcp/main.ts`.
 - Incumbent diff: the editor adds its management link under Agent / MCP. `src/style.css`, `src/preferences.ts`, and `src/i18n/index.ts` have no changes in the current diff.
 
 ## Continuity

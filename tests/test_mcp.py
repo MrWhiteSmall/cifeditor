@@ -1,6 +1,5 @@
 """Exercise actual MCP initialization/tool calls against the real editor ASGI app."""
 
-import sys
 from pathlib import Path
 
 import httpx
@@ -12,8 +11,6 @@ from annotation_studio import main
 from atomworks_studio_rfd4 import CONDITION_PROVIDER, VALIDATION_PROVIDER
 from cifeditor_mcp.client import EditorClient
 from cifeditor_mcp.server import create_server
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
 from mcp.shared.memory import create_connected_server_and_client_session
 
 FIXTURE = Path(__file__).parent / "fixtures" / "minimal_multichain.cif"
@@ -123,15 +120,3 @@ async def test_gui_write_invalidates_agent_preview(mcp_session):
     assert stale.isError and "revision_conflict" in stale.content[0].text
     refreshed = await call(session, "inspect_session", session_id=sid)
     assert refreshed["structure"]["revision"] == 1
-
-
-async def test_stdio_entry_point_initializes_without_polluting_protocol_stdout():
-    parameters = StdioServerParameters(command=sys.executable, args=["-m", "cifeditor_mcp.server"])
-    async with stdio_client(parameters) as (read, write):
-        async with ClientSession(read, write) as session:
-            initialized = await session.initialize()
-            assert initialized.serverInfo.name == "CIF Editor"
-            tools = await session.list_tools()
-            assert len(tools.tools) == 13
-            result = await session.call_tool("inspect_session", {"session_id": "../not-a-session"})
-            assert result.isError
